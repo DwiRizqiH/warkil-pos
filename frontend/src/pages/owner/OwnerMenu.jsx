@@ -1,0 +1,328 @@
+import { useMemo, useState } from 'react';
+import MenuCard from '../../components/MenuCard.jsx';
+import Modal from '../../components/Modal.jsx';
+import Icon from '../../components/Icon.jsx';
+import { useStore } from '../../store.jsx';
+import { grossOf, priceOf } from '../../data.js';
+import { sortMenus } from '../../selectors.js';
+import { rupiah } from '../../utils.js';
+
+function MenuForm({ initial, defaultCat, menus, categories, onSave, onClose }) {
+  const [f, setF] = useState(() =>
+    initial
+      ? {
+          name: initial.name,
+          cat: initial.cat,
+          emoji: initial.emoji || '🍽️',
+          image: initial.image || '',
+          price: initial.price ?? '',
+          discount: initial.discount ?? 10,
+          items: initial.items ? initial.items.map((x) => ({ ...x })) : [],
+        }
+      : { name: '', cat: defaultCat, emoji: '🍽️', image: '', price: '', discount: 10, items: [] }
+  );
+  const isPaket = f.cat === 'paket';
+  const pool = menus.filter((m) => !m.items && m.id !== initial?.id);
+  const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+
+  const draft = { items: f.items, discount: Number(f.discount) || 0 };
+  const gross = grossOf(draft, menus);
+  const final = priceOf(draft, menus);
+  const valid = f.name.trim() && (isPaket ? f.items.length > 0 : Number(f.price) > 0);
+
+  const addItem = (id) => {
+    if (!id) return;
+    setF((p) => {
+      const ex = p.items.find((x) => x.id === id);
+      return {
+        ...p,
+        items: ex ? p.items.map((x) => (x.id === id ? { ...x, qty: x.qty + 1 } : x)) : [...p.items, { id, qty: 1 }],
+      };
+    });
+  };
+  const setQty = (id, d) =>
+    setF((p) => ({
+      ...p,
+      items: p.items.map((x) => (x.id === id ? { ...x, qty: x.qty + d } : x)).filter((x) => x.qty > 0),
+    }));
+
+  const save = () => {
+    const base = {
+      id: initial?.id || 'x' + Date.now(),
+      name: f.name.trim(),
+      cat: f.cat,
+      emoji: f.emoji || '🍽️',
+      image: f.image.trim() || undefined,
+    };
+    onSave(isPaket ? { ...base, items: f.items, discount: Number(f.discount) || 0 } : { ...base, price: Number(f.price) });
+  };
+
+  return (
+    <Modal
+      title={initial ? 'Edit Menu' : 'Tambah Menu'}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn btn-ghost" onClick={onClose}>Batal</button>
+          <button className="btn btn-primary" disabled={!valid} onClick={save}>Simpan</button>
+        </>
+      }
+    >
+      <div className="form">
+        <div>
+          <label className="label">Nama menu</label>
+          <input className="input" value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="mis. Sop Kikil" />
+        </div>
+        <div className="form-row">
+          <div>
+            <label className="label">Kategori</label>
+            <select className="input" value={f.cat} onChange={(e) => set('cat', e.target.value)}>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          {!isPaket && (
+            <div>
+              <label className="label">Harga (Rp)</label>
+              <input className="input" type="number" min="0" value={f.price} onChange={(e) => set('price', e.target.value)} />
+            </div>
+          )}
+          {isPaket && (
+            <div>
+              <label className="label">Diskon (%)</label>
+              <input className="input" type="number" min="0" max="100" value={f.discount} onChange={(e) => set('discount', e.target.value)} />
+            </div>
+          )}
+        </div>
+
+        {isPaket && (
+          <div>
+            <label className="label">Isi paket</label>
+            <div className="paket-list">
+              {f.items.length === 0 && <div className="muted sm">Belum ada menu di paket ini.</div>}
+              {f.items.map((it) => {
+                const m = menus.find((x) => x.id === it.id);
+                return (
+                  <div key={it.id} className="paket-row">
+                    <span>{m?.name || '(menu dihapus)'}</span>
+                    <div className="qty">
+                      <button onClick={() => setQty(it.id, -1)}>−</button>
+                      <span>{it.qty}</span>
+                      <button onClick={() => setQty(it.id, 1)}>+</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <select className="input" value="" onChange={(e) => addItem(e.target.value)}>
+              <option value="">+ Tambah menu ke paket…</option>
+              {pool.map((m) => (
+                <option key={m.id} value={m.id}>{m.name} — {rupiah(m.price)}</option>
+              ))}
+            </select>
+            <div className="paket-sum">
+              <span>Harga normal <s>{rupiah(gross)}</s></span>
+              <b>Harga paket {rupiah(final)}</b>
+            </div>
+          </div>
+        )}
+
+        <div className="form-row">
+          <div>
+            <label className="label">Emoji (sementara pengganti foto)</label>
+            <input className="input" value={f.emoji} onChange={(e) => set('emoji', e.target.value)} />
+          </div>
+          <div>
+            <label className="label">URL foto (opsional)</label>
+            <input className="input" value={f.image} onChange={(e) => set('image', e.target.value)} placeholder="https://…" />
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function CategoryManager({ categories, menus, setCategories, onClose }) {
+  const [name, setName] = useState('');
+  const countOf = (id) => menus.filter((m) => m.cat === id).length;
+  return (
+    <Modal title="Kelola Kategori" onClose={onClose} footer={<button className="btn btn-dark" onClick={onClose}>Selesai</button>}>
+      <div className="stack">
+        {categories.map((c) => (
+          <div key={c.id} className="cat-row">
+            <input
+              className="input"
+              value={c.name}
+              onChange={(e) => setCategories((prev) => prev.map((x) => (x.id === c.id ? { ...x, name: e.target.value } : x)))}
+            />
+            <span className="muted sm">{countOf(c.id)} menu</span>
+            <button
+              className="icon-btn sm"
+              disabled={countOf(c.id) > 0}
+              title={countOf(c.id) > 0 ? 'Kosongkan kategori dulu sebelum dihapus' : 'Hapus kategori'}
+              onClick={() => setCategories((prev) => prev.filter((x) => x.id !== c.id))}
+            >
+              <Icon name="trash" size={18} />
+            </button>
+          </div>
+        ))}
+        <div className="cat-row">
+          <input className="input" placeholder="Nama kategori baru" value={name} onChange={(e) => setName(e.target.value)} />
+          <button
+            className="btn btn-primary"
+            disabled={!name.trim()}
+            onClick={() => {
+              setCategories((prev) => [...prev, { id: 'c' + Date.now(), name: name.trim() }]);
+              setName('');
+            }}
+          >
+            Tambah
+          </button>
+        </div>
+        <p className="muted sm">Kategori yang masih berisi menu tidak bisa dihapus.</p>
+      </div>
+    </Modal>
+  );
+}
+
+export default function OwnerMenu() {
+  const { menus, setMenus, categories, setCategories, best, hasMonthData, demoShort, setDemoShort, dataDays } = useStore();
+  const [catId, setCatId] = useState(categories[0]?.id);
+  const [form, setForm] = useState(null); // { menu? }
+  const [del, setDel] = useState(null);
+  const [catModal, setCatModal] = useState(false);
+
+  const activeCat = categories.find((c) => c.id === catId) || categories[0];
+  const rank = useMemo(() => new Map(best.map((b) => [b.id, b])), [best]);
+  const list = useMemo(
+    () => sortMenus(menus.filter((m) => m.cat === activeCat?.id), rank),
+    [menus, activeCat, rank]
+  );
+
+  const save = (menu) => {
+    setMenus((prev) => (prev.some((m) => m.id === menu.id) ? prev.map((m) => (m.id === menu.id ? menu : m)) : [...prev, menu]));
+    setCatId(menu.cat);
+    setForm(null);
+  };
+
+  return (
+    <div className="stack-lg">
+      <div className="spread wrap">
+        <h1 className="h1">Menu dan Kategori</h1>
+        <div className="row">
+          <button className="btn btn-ghost" onClick={() => setCatModal(true)}>Kelola kategori</button>
+          <button className="btn btn-primary" onClick={() => setForm({})}>
+            <Icon name="plus" size={18} /> Tambah menu
+          </button>
+        </div>
+      </div>
+
+      <section className="card card-pad stack">
+        <div className="spread wrap">
+          <h2 className="section-title">★ Best Seller</h2>
+          <label className="switch sm" title="Simulasi untuk demo">
+            <input type="checkbox" checked={demoShort} onChange={(e) => setDemoShort(e.target.checked)} />
+            <span className="track" />
+            <span>Demo: data &lt; 1 bulan</span>
+          </label>
+        </div>
+        {hasMonthData ? (
+          <>
+            <div className="best-row">
+              {best.map((b) => {
+                const m = menus.find((x) => x.id === b.id);
+                return (
+                  <div key={b.id} className="best-item">
+                    <span className="best-rank">★ {b.rank}</span>
+                    <b>{m?.name}</b>
+                    <small>{b.qty} terjual · 30 hari terakhir</small>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="muted sm">
+              Top 3 dihitung dari seluruh menu (bukan per kategori) dan terus diperbarui mengikuti penjualan 30 hari terakhir. Menu yang masuk
+              akan di-pin di paling atas kategorinya.
+            </p>
+          </>
+        ) : (
+          <p className="muted">
+            Belum ada tanda ★ karena data penjualan belum mencapai 1 bulan ({dataDays} hari terkumpul).
+          </p>
+        )}
+      </section>
+
+      <div className="chips scroll">
+        {categories.map((c) => (
+          <button key={c.id} className={'chip' + (c.id === activeCat?.id ? ' active' : '')} onClick={() => setCatId(c.id)}>
+            {c.name} <span className="chip-n">{menus.filter((m) => m.cat === c.id).length}</span>
+          </button>
+        ))}
+      </div>
+
+      {list.length === 0 ? (
+        <div className="card card-pad empty-note">Belum ada menu di kategori ini.</div>
+      ) : (
+        <div className="menu-grid">
+          {list.map((m) => (
+            <MenuCard
+              key={m.id}
+              menu={m}
+              menus={menus}
+              rank={rank.get(m.id)?.rank}
+              footer={
+                <div className="menu-actions">
+                  <button className="btn btn-ghost btn-sm" onClick={() => setForm({ menu: m })}>
+                    <Icon name="edit" size={15} /> Edit
+                  </button>
+                  <button className="btn btn-ghost btn-sm danger" onClick={() => setDel(m)}>
+                    <Icon name="trash" size={15} /> Hapus
+                  </button>
+                </div>
+              }
+            />
+          ))}
+        </div>
+      )}
+
+      {form && (
+        <MenuForm
+          initial={form.menu}
+          defaultCat={activeCat?.id}
+          menus={menus}
+          categories={categories}
+          onSave={save}
+          onClose={() => setForm(null)}
+        />
+      )}
+      {catModal && (
+        <CategoryManager categories={categories} menus={menus} setCategories={setCategories} onClose={() => setCatModal(false)} />
+      )}
+      {del && (
+        <Modal
+          title="Hapus menu?"
+          onClose={() => setDel(null)}
+          footer={
+            <>
+              <button className="btn btn-ghost" onClick={() => setDel(null)}>Batal</button>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setMenus((prev) => prev.filter((m) => m.id !== del.id));
+                  setDel(null);
+                }}
+              >
+                Ya, hapus
+              </button>
+            </>
+          }
+        >
+          <p>
+            <b>{del.name}</b> akan dihapus dari daftar menu. Riwayat penjualan tetap tersimpan.
+          </p>
+        </Modal>
+      )}
+    </div>
+  );
+}
