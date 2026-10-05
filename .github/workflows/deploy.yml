@@ -9,13 +9,18 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Semua action di-pin ke commit SHA, bukan tag — tag bisa digeser dan
+      # action pihak ketiga punya akses ke secrets (SSH_PASSWORD).
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
@@ -28,7 +33,7 @@ jobs:
           npm run build
 
       - name: Upload source + build ke server
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.SSH_HOST || '155.94.164.159' }}
           username: ${{ secrets.SSH_USER || 'dwi' }}
@@ -38,7 +43,7 @@ jobs:
           overwrite: true
 
       - name: Install backend deps & reload PM2
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
         with:
           host: ${{ secrets.SSH_HOST || '155.94.164.159' }}
           username: ${{ secrets.SSH_USER || 'dwi' }}

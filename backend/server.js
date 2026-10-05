@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.resolve(__dirname, '../frontend/dist');
 const PORT = Number(process.env.PORT) || 3100;
+// Loopback saja: nginx yang jadi satu-satunya pintu masuk. Bind ke 0.0.0.0 bikin
+// port ini bisa diakses langsung dari internet, melewati Cloudflare dan nginx.
+const HOST = process.env.HOST || '127.0.0.1';
 
 const app = express();
 app.disable('x-powered-by');
@@ -43,6 +46,6 @@ app.use((req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`warkil-kasir listening on http://127.0.0.1:${PORT} (dist: ${DIST})`);
+app.listen(PORT, HOST, () => {
+  console.log(`warkil-kasir listening on http://${HOST}:${PORT} (dist: ${DIST})`);
 });
