@@ -11,7 +11,10 @@ const HOST = process.env.HOST || '127.0.0.1';
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', true);
+// Hanya nginx (di host yang sama) yang boleh dipercaya. Dengan nilai `true`,
+// klien bisa mengirim header X-Forwarded-For sendiri dan req.ip ikut memalsukannya —
+// merusak rate-limit login dan log audit.
+app.set('trust proxy', 'loopback');
 
 // Satu-satunya endpoint asli. Nanti diganti router API betulan.
 app.get('/api/health', (_req, res) => {
