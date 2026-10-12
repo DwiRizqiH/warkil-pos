@@ -53,4 +53,14 @@ describe('priceLines', () => {
     ]);
     expect(orderTotal(lines)).toBe(56000);
   });
+
+  it.each([[0], [-1], [1.5], ['2']])('menolak qty %s dari klien', (qty) => {
+    const menus = [plain('kikil', 20000)];
+    expect(() => priceLines([{ productId: 'kikil', qty }], byId(menus))).toThrow(/jumlah/i);
+  });
+
+  it('menolak menu biasa yang harganya kosong', () => {
+    const menus = [{ ...plain('kikil', null) }];
+    expect(() => priceOf('kikil', byId(menus))).toThrow(/harga/i);
+  });
 });
