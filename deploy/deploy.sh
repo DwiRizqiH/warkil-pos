@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# Dipanggil di server oleh GitHub Actions (.github/workflows/deploy.yml).
-# Asumsi: source sudah ada di /home/dwi/warkil-kasir (hasil upload Actions).
+# Dijalankan di VPS oleh GitHub Actions setelah source di-upload.
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/home/dwi/warkil-kasir}"
 
 cd "$APP_DIR/backend"
 npm ci --omit=dev
+npx prisma generate
+npx prisma migrate deploy
 
 pm2 startOrReload ecosystem.config.cjs --update-env
 pm2 save
