@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ReceiptModal } from '../../components/Receipt.jsx';
 import Icon from '../../components/Icon.jsx';
 import { useStore } from '../../store.jsx';
-import { statusLabel, statusTone } from '../../selectors.js';
+import { orderTypeLabel, statusLabel, statusTone } from '../../selectors.js';
 import { rupiah, ymd } from '../../utils.js';
 
 const FILTERS = [
@@ -19,7 +19,6 @@ export default function DineOrders() {
   const today = ymd(now);
 
   const list = (index.byDate.get(today) || [])
-    .filter((t) => t.channel === 'kasir')
     .filter((t) => {
       if (filter === 'aktif') return t.status === 'proses' || t.status === 'siap';
       if (filter === 'selesai') return t.status === 'selesai';
@@ -55,7 +54,7 @@ export default function DineOrders() {
                   <div className="muted sm">{t.time} · {t.id.slice(-4)}</div>
                 </div>
                 <div className="order-badges">
-                  <span className="badge mute">{t.orderType === 'take' ? 'Takeaway' : 'Makan di tempat'}</span>
+                  <span className="badge mute">{orderTypeLabel(t)}</span>
                   <span className={'badge ' + statusTone(t.status)}>{statusLabel(t)}</span>
                 </div>
               </div>

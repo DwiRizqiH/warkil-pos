@@ -10,7 +10,6 @@ import CashierLogin from './pages/cashier/CashierLogin.jsx';
 import CashierLayout from './pages/cashier/CashierLayout.jsx';
 import Pos from './pages/cashier/Pos.jsx';
 import DineOrders from './pages/cashier/DineOrders.jsx';
-import OnlineOrders from './pages/cashier/OnlineOrders.jsx';
 import CashierSales from './pages/cashier/CashierSales.jsx';
 
 export default function App() {
@@ -30,7 +29,6 @@ export default function App() {
       <Route path="/kasir" element={<CashierLayout />}>
         <Route index element={<Pos />} />
         <Route path="pesanan" element={<DineOrders />} />
-        <Route path="online" element={<OnlineOrders />} />
         <Route path="penjualan" element={<CashierSales />} />
       </Route>
 

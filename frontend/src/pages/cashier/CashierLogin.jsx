@@ -33,7 +33,7 @@ export default function CashierLogin() {
           ))}
         </div>
 
-        <label className="label">PIN (demo: ketik 4 angka apa saja)</label>
+        <label className="label">PIN (ketik 4 angka apa saja)</label>
         <input
           className="input pin"
           inputMode="numeric"

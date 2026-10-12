@@ -14,7 +14,6 @@ export default function CashierLayout() {
     { to: '/kasir', label: 'Buat Pesanan', icon: 'cart', end: true },
     { to: '/kasir/penjualan', label: 'Penjualan', icon: 'receipt' },
     { to: '/kasir/pesanan', label: 'Pesanan Kasir', icon: 'cart' },
-    { to: '/kasir/online', label: 'Pesanan Online', icon: 'bag' },
     {
       label: 'Log out',
       icon: 'logout',

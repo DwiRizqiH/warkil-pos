@@ -415,7 +415,6 @@ a.role-card:hover { transform: translateY(-3px); border-color: var(--red); }
 .order-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .order-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .queue-big { font-size: 40px; font-weight: 800; letter-spacing: 0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
-.queue-big.online { color: var(--red); font-size: 36px; }
 .queue-big.wait { color: var(--line); }
 .countdown { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: var(--warn-l); color: var(--warn); border-radius: 10px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .order-items { display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); }
@@ -423,14 +422,6 @@ a.role-card:hover { transform: translateY(-3px); border-color: var(--red); }
 .order-items em { font-style: normal; color: var(--red); font-size: 12.5px; font-weight: 600; }
 .order-note { background: var(--warn-l); border-radius: 8px; padding: 6px 10px; font-size: 13px; }
 .order-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-.driver { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13.5px; }
-.platform-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-@media (max-width: 760px) { .platform-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.platform { background: #fff; border: 2px solid var(--line); border-radius: 16px; padding: 14px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
-.platform:hover { border-color: var(--ink); }
-.platform.on { border-color: var(--red); background: var(--red-l); }
-.platform small { color: var(--ink-2); }
-.pcode { align-self: flex-start; background: var(--ink); color: #fff; font-weight: 800; letter-spacing: 0.08em; font-size: 12px; padding: 2px 9px; border-radius: 8px; margin-bottom: 4px; }
 
 /* ---------- nota (struk) ---------- */
 .print-area { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
@@ -441,7 +432,6 @@ a.role-card:hover { transform: translateY(-3px); border-color: var(--red); }
 .rc-addr { text-align: center; font-size: 11px; margin-bottom: 10px; }
 .rc-q-label { text-align: center; font-size: 11px; letter-spacing: 0.12em; }
 .rc-q { text-align: center; font-size: 52px; font-weight: 800; line-height: 1.05; letter-spacing: 0.04em; }
-.rc-tag { text-align: center; font-weight: 800; font-size: 14px; margin-top: 2px; }
 .rc-sep { border-top: 2px solid #000; margin: 10px 0; }
 .rc-sep.dashed { border-top: 1px dashed #000; }
 .rc-meta { text-align: left; }

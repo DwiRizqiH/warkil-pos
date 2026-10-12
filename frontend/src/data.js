@@ -8,13 +8,6 @@ export const SHOP = {
 };
 
 export const CASHIERS = ['Siti Rahma', 'Budi Santoso', 'Dewi Lestari'];
-export const DRIVERS = ['Pak Anto', 'Mas Dedi', 'Bang Rudi', 'Kak Sari', 'Mas Yoga'];
-
-export const PLATFORMS = [
-  { code: 'GJK', name: 'GoFood' },
-  { code: 'GRB', name: 'GrabFood' },
-  { code: 'SHPE', name: 'ShopeeFood' },
-];
 
 export const SHIFTS = [
   { idx: 0, label: 'Shift 1', start: '08:00', end: '15:00' },
@@ -132,10 +125,7 @@ export function generateHistory(menus, now = new Date(), daysBack = 120) {
     for (let i = 0; i < n; i++) {
       const hour = 8 + pickIndex(rng, HOUR_W);
       const minute = Math.floor(rng() * 60);
-      const roll = rng();
-      const channel = roll < 0.7 ? 'kasir' : roll < 0.83 ? 'GJK' : roll < 0.93 ? 'GRB' : 'SHPE';
-      const online = channel !== 'kasir';
-      const lines = 1 + Math.floor(rng() * 3) + (online && rng() < 0.4 ? 1 : 0);
+      const lines = 1 + Math.floor(rng() * 3);
       const chosen = new Map();
       for (let j = 0; j < lines; j++) {
         const id = ids[pickIndex(rng, wts)];
@@ -144,18 +134,14 @@ export function generateHistory(menus, now = new Date(), daysBack = 120) {
         chosen.set(id, (chosen.get(id) || 0) + q);
       }
       const payRoll = rng();
-      const driver = DRIVERS[Math.floor(rng() * DRIVERS.length)];
-      const ref = 1000 + Math.floor(rng() * 8999);
       const take = rng() < 0.2;
       const mins = hour * 60 + minute;
       if (date === today && mins > nowMin - 2) continue;
-      list.push({ mins, channel, online, chosen, payRoll, driver, ref, take });
+      list.push({ mins, chosen, payRoll, take });
     }
 
     list.sort((a, b) => a.mins - b.mins);
     let seq = 0;
-    let kasirSeq = 0;
-    const plat = { GJK: 0, GRB: 0, SHPE: 0 };
 
     for (const t of list) {
       seq++;
@@ -165,31 +151,20 @@ export function generateHistory(menus, now = new Date(), daysBack = 120) {
         return { id, name: m.name, qty, price: priceOf(m, menus) };
       });
       const total = items.reduce((s, i) => s + i.price * i.qty, 0);
-      let queue;
-      if (t.online) {
-        plat[t.channel]++;
-        queue = t.channel + pad(plat[t.channel]);
-      } else {
-        kasirSeq++;
-        queue = pad(kasirSeq, 3);
-      }
       const age = date === today ? nowMin - t.mins : 9999;
       const status = age > 25 ? 'selesai' : age > 12 ? 'siap' : 'proses';
       out.push({
         id: `TRX-${date.replace(/-/g, '')}-${pad(seq, 4)}`,
         date,
         time,
-        channel: t.channel,
-        queue,
-        orderType: t.online || (t.channel === 'kasir' && t.take) ? 'take' : 'dine',
-        payment: t.online ? 'Aplikasi' : t.payRoll < 0.55 ? 'Cash' : 'QRIS',
+        queue: pad(seq, 3),
+        orderType: t.take ? 'take' : 'dine',
+        payment: t.payRoll < 0.55 ? 'Cash' : 'QRIS',
         items,
         note: '',
         total,
         status,
         cashier: scheduledCashier(date, shiftIndexOf(time)),
-        driver: t.online ? t.driver : null,
-        ref: t.online ? `${t.channel}-${t.ref}` : null,
       });
     }
   }

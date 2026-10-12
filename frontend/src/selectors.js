@@ -1,18 +1,17 @@
 import { addDays, pad, parseYmd, shiftIndexOf, ymd } from './utils.js';
-import { PLATFORMS, SHIFTS, scheduledCashier, shiftTimes } from './data.js';
+import { SHIFTS, scheduledCashier, shiftTimes } from './data.js';
 
 export const NON_SALE = ['batal'];
 export const isSale = (t) => !NON_SALE.includes(t.status);
-export const isOnline = (t) => t.channel !== 'kasir';
 export const txQty = (t) => t.items.reduce((s, i) => s + i.qty, 0);
+export const orderTypeLabel = (t) => (t.orderType === 'take' ? 'Takeaway' : 'Makan di tempat');
 
 export function statusLabel(t) {
-  const online = isOnline(t);
   switch (t.status) {
     case 'batal': return 'Dibatalkan';
-    case 'proses': return online ? 'Sedang disiapkan' : 'Diproses';
-    case 'siap': return online ? 'Siap diambil' : 'Siap diambil';
-    case 'selesai': return online ? 'Sudah diambil' : 'Selesai';
+    case 'proses': return 'Diproses';
+    case 'siap': return 'Siap diambil';
+    case 'selesai': return 'Selesai';
     default: return t.status;
   }
 }
@@ -22,11 +21,6 @@ export function statusTone(s) {
   if (s === 'proses') return 'warn';
   if (s === 'siap') return 'dark';
   return 'mute';
-}
-
-export function sourceLabel(t) {
-  if (t.channel === 'kasir') return 'Kasir';
-  return PLATFORMS.find((p) => p.code === t.channel)?.name || t.channel;
 }
 
 export function buildIndex(txs) {

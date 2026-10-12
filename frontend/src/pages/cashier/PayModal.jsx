@@ -20,7 +20,6 @@ export default function PayModal({ onClose, onDone }) {
 
   const finalize = (payment) => {
     const t = createOrder({
-      channel: 'kasir',
       orderType: cart.orderType,
       payment,
       status: 'proses',
@@ -120,7 +119,7 @@ export default function PayModal({ onClose, onDone }) {
             </div>
             <div className="row end">
               <button className="btn btn-ghost" onClick={() => setReceipt(true)}>
-                <Icon name="print" size={18} /> Cetak nota (2×)
+                <Icon name="print" size={18} /> Cetak nota
               </button>
               <button className="btn btn-primary btn-lg" onClick={onDone}>Pesanan baru</button>
             </div>

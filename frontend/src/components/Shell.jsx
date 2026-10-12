@@ -58,11 +58,6 @@ export default function Shell({ role, home, items, right, children }) {
             )
           )}
         </nav>
-        <div className="drawer-foot">
-          <Link to="/" className="muted-link">
-            ← Ganti peran (demo)
-          </Link>
-        </div>
       </aside>
 
       <main className="shell-main">{children}</main>

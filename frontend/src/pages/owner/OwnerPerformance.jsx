@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import CalendarGrid from '../../components/CalendarGrid.jsx';
 import ShiftCard, { TopCashierCard } from '../../components/ShiftCard.jsx';
 import { useStore } from '../../store.jsx';
-import { cashierTotals, getShifts, sourceLabel, txQty } from '../../selectors.js';
+import { cashierTotals, getShifts, orderTypeLabel, txQty } from '../../selectors.js';
 import { MONTHS_ID, fmtDateLong, parseYmd, rupiah, ymd } from '../../utils.js';
 
 export default function OwnerPerformance() {
@@ -77,14 +77,14 @@ export default function OwnerPerformance() {
           <div className="table-wrap tall">
             <table className="tbl">
               <thead>
-                <tr><th>Jam</th><th>Antrian</th><th>Sumber</th><th>Pesanan</th><th>Bayar</th><th className="r">Total</th></tr>
+                <tr><th>Jam</th><th>Antrian</th><th>Tipe</th><th>Pesanan</th><th>Bayar</th><th className="r">Total</th></tr>
               </thead>
               <tbody>
                 {[...s.txs].reverse().map((t) => (
                   <tr key={t.id}>
                     <td>{t.time}</td>
                     <td><span className="qchip">{t.queue}</span></td>
-                    <td>{sourceLabel(t)}</td>
+                    <td>{orderTypeLabel(t)}</td>
                     <td className="wrap-cell">{t.items.map((i) => `${i.qty}× ${i.name}`).join(', ')} <span className="muted">({txQty(t)} item)</span></td>
                     <td>{t.payment}</td>
                     <td className="r"><b>{rupiah(t.total)}</b></td>

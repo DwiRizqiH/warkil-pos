@@ -3,7 +3,7 @@ import BarChart from '../../components/BarChart.jsx';
 import StatTile from '../../components/StatTile.jsx';
 import Icon from '../../components/Icon.jsx';
 import { useStore } from '../../store.jsx';
-import { isSale, sourceLabel, txQty } from '../../selectors.js';
+import { isSale, orderTypeLabel, txQty } from '../../selectors.js';
 import { MONTHS_ID, addDays, fmtDateShort, parseYmd, rupiah, ymd } from '../../utils.js';
 
 const PAGE = 15;
@@ -125,7 +125,7 @@ export default function OwnerSales() {
           <table className="tbl">
             <thead>
               <tr>
-                <th>Tanggal</th><th>Jam</th><th>ID Transaksi</th><th>Antrian</th><th>Sumber</th><th>Kasir</th><th>Item</th><th>Bayar</th><th className="r">Total</th>
+                <th>Tanggal</th><th>Jam</th><th>ID Transaksi</th><th>Antrian</th><th>Tipe</th><th>Kasir</th><th>Item</th><th>Bayar</th><th className="r">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -135,7 +135,7 @@ export default function OwnerSales() {
                   <td>{t.time}</td>
                   <td className="mono">{t.id}</td>
                   <td><span className="qchip">{t.queue}</span></td>
-                  <td>{sourceLabel(t)}</td>
+                  <td>{orderTypeLabel(t)}</td>
                   <td>{t.cashier}</td>
                   <td>{txQty(t)}</td>
                   <td>{t.payment}</td>

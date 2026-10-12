@@ -91,16 +91,6 @@ export function StoreProvider({ children }) {
     setTimeout(() => setToast((t) => (t && t.id === id ? null : t)), 3500);
   }, []);
 
-  // Notifikasi pesanan online baru (hanya di layar kasir)
-  const prevLen = useRef(extra.length);
-  useEffect(() => {
-    if (extra.length > prevLen.current && window.location.pathname.startsWith('/kasir')) {
-      const t = extra[extra.length - 1];
-      if (t && t.channel !== 'kasir') notify(`Pesanan online baru (${t.queue})`);
-    }
-    prevLen.current = extra.length;
-  }, [extra, notify]);
-
   const nextSeq = () => {
     const today = ymd(new Date());
     const nums = txRef.current
@@ -109,15 +99,13 @@ export function StoreProvider({ children }) {
     return Math.max(0, ...nums) + 1;
   };
 
-  // Nomor antrian: pesanan kasir 001, 002, ... (reset tiap hari);
-  // pesanan online punya urutan sendiri per platform: GJK01, GRB01, SHPE01, ...
-  const nextQueue = (channel) => {
+  // Nomor antrian: 001, 002, ... (reset tiap hari)
+  const nextQueue = () => {
     const today = ymd(new Date());
     const nums = txRef.current
-      .filter((t) => t.date === today && t.channel === channel)
+      .filter((t) => t.date === today)
       .map((t) => parseInt(String(t.queue).replace(/\D/g, ''), 10));
-    const n = Math.max(0, ...nums) + 1;
-    return channel === 'kasir' ? pad(n, 3) : channel + pad(n);
+    return pad(Math.max(0, ...nums) + 1, 3);
   };
 
   const createOrder = useCallback((o) => {
@@ -130,15 +118,13 @@ export function StoreProvider({ children }) {
     const tx = {
       note: '',
       orderType: 'dine',
-      driver: null,
-      ref: null,
       ...o,
       id: `TRX-${date.replace(/-/g, '')}-${pad(nextSeq(), 4)}`,
       date,
       time,
       cashier,
       createdAt: d.getTime(),
-      queue: nextQueue(o.channel),
+      queue: nextQueue(),
       total: o.items.reduce((sum, i) => sum + i.price * i.qty, 0),
     };
     setExtra((prev) => [...prev, tx]);
@@ -171,22 +157,15 @@ export function StoreProvider({ children }) {
   );
   const logout = useCallback(() => setSession(null), [setSession]);
 
-  const resetDemo = useCallback(() => {
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith('kikil:'))
-      .forEach((k) => localStorage.removeItem(k));
-    window.location.href = '/';
-  }, []);
-
   const value = useMemo(
     () => ({
       menus, setMenus, categories, setCategories, marks, setMarks, sundayOff, setSundayOff,
       getMark, allTx, index, now, session, login, logout, createOrder, updateTx,
-      best, hasMonthData, demoShort, setDemoShort, dataDays, notify, resetDemo,
+      best, hasMonthData, demoShort, setDemoShort, dataDays, notify,
     }),
     [
       menus, categories, marks, sundayOff, getMark, allTx, index, now, session, login, logout,
-      createOrder, updateTx, best, hasMonthData, demoShort, dataDays, notify, resetDemo,
+      createOrder, updateTx, best, hasMonthData, demoShort, dataDays, notify,
     ] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
