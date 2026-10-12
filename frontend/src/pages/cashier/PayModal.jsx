@@ -4,24 +4,28 @@ import Modal from '../../components/Modal.jsx';
 import Icon from '../../components/Icon.jsx';
 import { ReceiptModal } from '../../components/Receipt.jsx';
 import { useStore } from '../../store.jsx';
+import { useCart } from '../../context/CartContext.jsx';
 import { rupiah } from '../../utils.js';
 
-export default function PayModal({ cart, total, orderType, onClose, onDone }) {
+export default function PayModal({ onClose, onDone }) {
   const { createOrder, session } = useStore();
+  const cart = useCart();
   const [step, setStep] = useState('choose'); // choose | cash | qris | done
   const [received, setReceived] = useState('');
   const [tx, setTx] = useState(null);
   const [receipt, setReceipt] = useState(false);
   const ref = useRef(`KKA${Date.now().toString().slice(-6)}`);
 
+  const total = cart.total;
+
   const finalize = (payment) => {
     const t = createOrder({
       channel: 'kasir',
-      orderType,
+      orderType: cart.orderType,
       payment,
       status: 'proses',
       cashier: session?.cashier,
-      items: cart.map(({ id, name, qty, price, note }) => ({ id, name, qty, price, note })),
+      items: cart.lines.map(({ id, name, qty, price, note }) => ({ id, name, qty, price, note })),
     });
     setTx(t);
     setStep('done');

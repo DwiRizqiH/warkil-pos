@@ -3,16 +3,17 @@ import MenuCard from '../../components/MenuCard.jsx';
 import Icon from '../../components/Icon.jsx';
 import PayModal from './PayModal.jsx';
 import { useStore } from '../../store.jsx';
+import { useCart } from '../../context/CartContext.jsx';
+import { qtyOf as qtyInCart } from '../../context/cartReducer.js';
 import { priceOf } from '../../data.js';
 import { sortMenus } from '../../selectors.js';
 import { rupiah } from '../../utils.js';
 
 export default function Pos() {
   const { menus, categories, best } = useStore();
+  const cart = useCart();
   const [cat, setCat] = useState('all');
   const [q, setQ] = useState('');
-  const [cart, setCart] = useState([]);
-  const [orderType, setOrderType] = useState('dine');
   const [noteOpen, setNoteOpen] = useState(null);
   const [pay, setPay] = useState(false);
 
@@ -26,25 +27,11 @@ export default function Pos() {
     return sortMenus(list, rank, cat === 'all' || term ? catOrder : undefined);
   }, [menus, cat, q, rank, catOrder]);
 
-  const qtyOf = (id) => cart.find((i) => i.id === id)?.qty || 0;
-  const count = cart.reduce((s, i) => s + i.qty, 0);
-  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
-
-  const add = (m) =>
-    setCart((prev) => {
-      const ex = prev.find((i) => i.id === m.id);
-      if (ex) return prev.map((i) => (i.id === m.id ? { ...i, qty: i.qty + 1 } : i));
-      return [...prev, { id: m.id, name: m.name, price: priceOf(m, menus), qty: 1, note: '' }];
-    });
-  const step = (id, d) =>
-    setCart((prev) => prev.map((i) => (i.id === id ? { ...i, qty: i.qty + d } : i)).filter((i) => i.qty > 0));
-  const remove = (id) => setCart((prev) => prev.filter((i) => i.id !== id));
-  const setNote = (id, note) => setCart((prev) => prev.map((i) => (i.id === id ? { ...i, note } : i)));
+  const add = (m) => cart.dispatch({ type: 'add', menu: { id: m.id, name: m.name, price: priceOf(m, menus) } });
   const reset = () => {
-    setCart([]);
+    cart.dispatch({ type: 'clear' });
     setNoteOpen(null);
     setPay(false);
-    setOrderType('dine');
   };
 
   return (
@@ -52,31 +39,31 @@ export default function Pos() {
       <aside className="pos-bill card" id="bill">
         <div className="bill-head">
           <h3>Nota Pesanan</h3>
-          <button className="btn btn-ghost btn-sm" disabled={!cart.length} onClick={reset}>
+          <button className="btn btn-ghost btn-sm" disabled={!cart.lines.length} onClick={reset}>
             Kosongkan
           </button>
         </div>
 
         <div className="bill-lines">
-          {cart.length === 0 && (
+          {cart.lines.length === 0 && (
             <div className="bill-empty">
               <Icon name="receipt" size={30} />
               <p>Belum ada pesanan.<br />Pilih menu di sebelah kanan.</p>
             </div>
           )}
-          {cart.map((i) => (
+          {cart.lines.map((i) => (
             <div className="bill-line" key={i.id}>
               <div className="bl-top">
                 <div className="bl-name">{i.name}</div>
-                <button className="icon-btn xs" onClick={() => remove(i.id)} aria-label={`Hapus ${i.name}`}>
+                <button className="icon-btn xs" onClick={() => cart.dispatch({ type: 'remove', id: i.id })} aria-label={`Hapus ${i.name}`}>
                   <Icon name="trash" size={16} />
                 </button>
               </div>
               <div className="bl-mid">
                 <div className="qty">
-                  <button onClick={() => step(i.id, -1)} aria-label="Kurangi">−</button>
+                  <button onClick={() => cart.dispatch({ type: 'step', id: i.id, delta: -1 })} aria-label="Kurangi">−</button>
                   <span>{i.qty}</span>
-                  <button onClick={() => step(i.id, 1)} aria-label="Tambah">+</button>
+                  <button onClick={() => cart.dispatch({ type: 'step', id: i.id, delta: 1 })} aria-label="Tambah">+</button>
                 </div>
                 <div className="bl-sub">{rupiah(i.price * i.qty)}</div>
               </div>
@@ -86,7 +73,7 @@ export default function Pos() {
                   placeholder="Catatan (mis. tanpa sambal)"
                   value={i.note}
                   autoFocus={noteOpen === i.id}
-                  onChange={(e) => setNote(i.id, e.target.value)}
+                  onChange={(e) => cart.dispatch({ type: 'note', id: i.id, note: e.target.value })}
                 />
               ) : (
                 <button className="link" onClick={() => setNoteOpen(i.id)}>+ catatan</button>
@@ -97,14 +84,14 @@ export default function Pos() {
 
         <div className="bill-foot">
           <div className="seg full">
-            <button className={orderType === 'dine' ? 'on' : ''} onClick={() => setOrderType('dine')}>Makan di tempat</button>
-            <button className={orderType === 'take' ? 'on' : ''} onClick={() => setOrderType('take')}>Takeaway</button>
+            <button className={cart.orderType === 'dine' ? 'on' : ''} onClick={() => cart.dispatch({ type: 'orderType', orderType: 'dine' })}>Makan di tempat</button>
+            <button className={cart.orderType === 'take' ? 'on' : ''} onClick={() => cart.dispatch({ type: 'orderType', orderType: 'take' })}>Takeaway</button>
           </div>
           <div className="bill-total">
-            <span>Total ({count} item)</span>
-            <b>{rupiah(total)}</b>
+            <span>Total ({cart.count} item)</span>
+            <b>{rupiah(cart.total)}</b>
           </div>
-          <button className="btn btn-primary btn-lg btn-block" disabled={!cart.length} onClick={() => setPay(true)}>
+          <button className="btn btn-primary btn-lg btn-block" disabled={!cart.lines.length} onClick={() => setPay(true)}>
             Bayar
           </button>
         </div>
@@ -136,19 +123,19 @@ export default function Pos() {
         ) : (
           <div className="menu-grid pos-grid">
             {visible.map((m) => (
-              <MenuCard key={m.id} menu={m} menus={menus} rank={rank.get(m.id)?.rank} qty={qtyOf(m.id)} onClick={() => add(m)} />
+              <MenuCard key={m.id} menu={m} menus={menus} rank={rank.get(m.id)?.rank} qty={qtyInCart(cart, m.id)} onClick={() => add(m)} />
             ))}
           </div>
         )}
       </section>
 
-      {cart.length > 0 && (
+      {cart.lines.length > 0 && (
         <a href="#bill" className="bill-fab">
-          <Icon name="receipt" size={18} /> Nota ({count}) · {rupiah(total)}
+          <Icon name="receipt" size={18} /> Nota ({cart.count}) · {rupiah(cart.total)}
         </a>
       )}
 
-      {pay && <PayModal cart={cart} total={total} orderType={orderType} onClose={() => setPay(false)} onDone={reset} />}
+      {pay && <PayModal onClose={() => setPay(false)} onDone={reset} />}
     </div>
   );
 }
