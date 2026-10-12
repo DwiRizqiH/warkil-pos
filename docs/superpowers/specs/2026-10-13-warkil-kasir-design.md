@@ -28,7 +28,7 @@ availability toggles, customer accounts, file upload, void/refund of paid orders
 ## 3. Repo layout
 
 ```
-backend/          Express + TypeScript (strict) + Prisma
+backend/          Express + JavaScript ESM + Prisma (no build step)
 frontend/         Existing Vite + React (JS/JSX, plain CSS) — no Tailwind
 deploy/           nginx site, deploy.sh (unchanged)
 docs/             Project docs (rewritten to match this spec)
@@ -38,8 +38,9 @@ CLAUDE.md         code style rules (written in Phase 2)
 ```
 
 `backend/ecosystem.config.cjs` (pm2, port 3100) and the GitHub Actions deploy chain are kept as
-they are. Express continues to serve `frontend/dist` with an SPA fallback, so API and UI share an
-origin in production; Vite proxies `/api` to the backend in development.
+they are, with pm2 running `src/server.js` directly. Express continues to serve `frontend/dist`
+with an SPA fallback, so API and UI share one origin in production; Vite proxies `/api` to the
+backend in development.
 
 ## 4. Data model
 
@@ -502,9 +503,10 @@ simulator.
 ## 10. Backend architecture
 
 Express (already deployed, health endpoint and SPA serving in place, minimal churn). Layers:
-routes → controllers → services → Prisma. Zod on all input, one centralized error handler with a
-consistent JSON shape, env validated at startup, pino logging, helmet, CORS restricted to the
-frontend origin, rate limiting on login. No `any`; the backend is TypeScript with `strict`.
+routes → services → Prisma. Zod on all input, one centralized error handler with a consistent JSON
+shape, env validated at startup, pino logging, helmet, CORS restricted to the frontend origin, rate
+limiting on login. Plain JavaScript ESM run straight from `src/` — no compiler and no build step,
+so Zod at every boundary is the only thing standing between a request body and the database.
 
 ## 11. Testing
 
