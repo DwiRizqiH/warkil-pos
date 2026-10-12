@@ -9,11 +9,25 @@ export const useCart = () => {
   return value;
 };
 
+// Isi sessionStorage bisa saja rusak atau ditulis tangan, jadi setiap baris disaring dulu:
+// baris tanpa id atau dengan harga/jumlah bukan angka akan membuat total NaN.
+function validLine(l) {
+  return (
+    l &&
+    typeof l.id === 'string' &&
+    l.id !== '' &&
+    Number.isFinite(Number(l.price)) &&
+    Number.isFinite(Number(l.qty)) &&
+    Number(l.qty) > 0
+  );
+}
+
 function readStored() {
   try {
     const parsed = JSON.parse(sessionStorage.getItem(KEY));
     if (!parsed || !Array.isArray(parsed.lines)) return emptyCart;
-    return { lines: parsed.lines, orderType: parsed.orderType === 'take' ? 'take' : 'dine' };
+    const lines = parsed.lines.filter(validLine).map((l) => ({ ...l, price: Number(l.price), qty: Number(l.qty) }));
+    return { lines, orderType: parsed.orderType === 'take' ? 'take' : 'dine' };
   } catch {
     return emptyCart;
   }

@@ -58,7 +58,6 @@ export function StoreProvider({ children }) {
   const [extra, setExtra] = usePersist('extraTx', []);
   const [overrides, setOverrides] = usePersist('overrides', {});
   const [session, setSession] = usePersist('session', null);
-  const [toast, setToast] = useState(null);
   const now = useNow(15000);
   const todayStr = ymd(now);
 
@@ -83,12 +82,6 @@ export function StoreProvider({ children }) {
   extraRef.current = extra;
   const sessionRef = useRef(session);
   sessionRef.current = session;
-
-  const notify = useCallback((msg) => {
-    const id = Date.now();
-    setToast({ id, msg });
-    setTimeout(() => setToast((t) => (t && t.id === id ? null : t)), 3500);
-  }, []);
 
   const nextSeq = () => {
     const today = ymd(new Date());
@@ -160,22 +153,13 @@ export function StoreProvider({ children }) {
     () => ({
       menus, setMenus, categories, setCategories, marks, setMarks, sundayOff, setSundayOff,
       getMark, allTx, index, now, session, login, logout, createOrder, updateTx,
-      best, hasMonthData, dataDays, notify,
+      best, hasMonthData, dataDays,
     }),
     [
       menus, categories, marks, sundayOff, getMark, allTx, index, now, session, login, logout,
-      createOrder, updateTx, best, hasMonthData, dataDays, notify,
+      createOrder, updateTx, best, hasMonthData, dataDays,
     ] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  return (
-    <Ctx.Provider value={value}>
-      {children}
-      {toast && (
-        <div className="toast" key={toast.id} role="status">
-          {toast.msg}
-        </div>
-      )}
-    </Ctx.Provider>
-  );
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

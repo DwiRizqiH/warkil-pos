@@ -45,6 +45,26 @@ test('survives corrupted storage instead of crashing', () => {
   expect(screen.getByTestId('count').textContent).toBe('0');
 });
 
+// Keranjang datang dari sessionStorage, jadi isinya tidak dipercaya begitu saja.
+test('drops stored lines with a malformed price or qty, so the total stays a number', () => {
+  sessionStorage.setItem(
+    'kikil:cart',
+    JSON.stringify({
+      lines: [
+        { id: 'm1', name: 'Sop Kikil', price: 25000, qty: 2, note: '' },
+        { id: 'm2', name: 'Tanpa harga', qty: 1 },
+        { id: 'm3', name: 'Harga rusak', price: 'abc', qty: 1 },
+        { id: 'm4', name: 'Jumlah nol', price: 5000, qty: 0 },
+      ],
+      orderType: 'dine',
+    })
+  );
+  mount();
+  expect(screen.getByTestId('lines').textContent).toBe('2xSop Kikil');
+  expect(screen.getByTestId('count').textContent).toBe('2');
+  expect(screen.getByTestId('total').textContent).toBe('50000');
+});
+
 test('clear empties the persisted cart', () => {
   mount();
   act(() => screen.getByText('add').click());

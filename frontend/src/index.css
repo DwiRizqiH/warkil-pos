@@ -207,7 +207,6 @@ textarea.input { resize: vertical; }
 .drawer-item:hover { background: #f4eeeb; }
 .drawer-item.active { background: var(--red); color: #fff; }
 .drawer-item.danger { color: var(--red); margin-top: auto; border-top: 1px solid var(--line); border-radius: 0 0 12px 12px; }
-.drawer-foot { padding: 14px 18px; border-top: 1px solid var(--line); }
 
 .shell-main { min-height: calc(100vh - var(--topbar)); }
 .page { max-width: 1180px; margin: 0 auto; padding: 22px 16px 60px; }
@@ -356,7 +355,6 @@ a.role-card:hover { transform: translateY(-3px); border-color: var(--red); }
 .role-card p { color: var(--ink-2); font-size: 14px; }
 .role-go { margin-top: auto; padding-top: 6px; display: inline-flex; align-items: center; gap: 4px; color: var(--red); font-weight: 800; font-size: 14px; }
 .table-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.landing-foot { display: flex; gap: 12px; justify-content: center; align-items: center; padding: 34px 16px 50px; color: var(--mute); flex-wrap: wrap; }
 
 .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--ink); }
 .login-card { background: #fff; border-radius: 22px; padding: 28px; width: min(420px, 100%); display: flex; flex-direction: column; gap: 12px; border-top: 5px solid var(--red); }
@@ -426,7 +424,6 @@ a.role-card:hover { transform: translateY(-3px); border-color: var(--red); }
 /* ---------- nota (struk) ---------- */
 .print-area { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
 .rc-page { display: flex; flex-direction: column; gap: 6px; align-items: center; }
-.rc-cap { font-size: 12px; font-weight: 700; color: var(--mute); text-transform: uppercase; letter-spacing: 0.08em; }
 .receipt { width: 280px; background: #fff; color: #000; border: 1px solid var(--line); padding: 16px 14px; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.4; }
 .rc-shop { text-align: center; font-weight: 800; font-size: 15px; letter-spacing: 0.06em; }
 .rc-addr { text-align: center; font-size: 11px; margin-bottom: 10px; }
@@ -441,17 +438,12 @@ a.role-card:hover { transform: translateY(-3px); border-color: var(--red); }
 .rc-total { font-weight: 800; font-size: 14px; }
 .rc-foot { text-align: center; font-size: 11px; }
 
-/* ---------- toast ---------- */
-.toast { position: fixed; top: 74px; right: 16px; z-index: 200; background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 14px; font-weight: 700; border-left: 5px solid var(--red); box-shadow: 0 10px 30px rgba(0,0,0,.35); animation: slide .25s ease; max-width: calc(100vw - 32px); }
-@keyframes slide { from { transform: translateY(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
-
 /* ---------- cetak ---------- */
 @media print {
   body * { visibility: hidden; }
   .print-area, .print-area * { visibility: visible; }
-  .no-print { display: none !important; }
   .modal-wrap, .modal, .modal-body { position: static !important; max-height: none !important; overflow: visible !important; box-shadow: none !important; background: #fff !important; padding: 0 !important; display: block !important; width: auto !important; }
   .print-area { position: absolute; left: 0; top: 0; display: block; width: 72mm; }
-  .rc-page { break-after: page; display: block; }
+  .rc-page { display: block; }
   .receipt { width: 72mm; border: 0; }
 }
