@@ -1,10 +1,30 @@
 import 'dotenv/config';
+import { z } from 'zod';
 
-// Sementara: nilai mentah dengan default. Task 2 menggantinya dengan validasi Zod
-// (parseEnv) supaya konfigurasi yang salah ketik gagal saat start, bukan saat dipakai.
-export const env = {
-  NODE_ENV: process.env.NODE_ENV ?? 'development',
-  HOST: process.env.HOST ?? '127.0.0.1',
-  PORT: Number(process.env.PORT ?? 3100),
-  FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173',
-};
+const schema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().int().positive().default(3100),
+  HOST: z.string().min(1).default('127.0.0.1'),
+  DATABASE_URL: z.string().min(1),
+  JWT_SECRET: z.string().min(32, 'minimal 32 karakter'),
+  FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),
+  MIDTRANS_SERVER_KEY: z.string().default(''),
+  MIDTRANS_CLIENT_KEY: z.string().default(''),
+  // z.coerce.boolean() menganggap string "false" sebagai true; enum ini memaksa nilai eksplisit.
+  MIDTRANS_IS_PRODUCTION: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  MIDTRANS_EXPIRY_MINUTES: z.coerce.number().int().positive().default(15),
+});
+
+export function parseEnv(source = process.env) {
+  const result = schema.safeParse(source);
+  if (!result.success) {
+    const detail = result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ');
+    throw new Error(`Konfigurasi environment tidak valid — ${detail}`);
+  }
+  return result.data;
+}
+
+export const env = parseEnv();
