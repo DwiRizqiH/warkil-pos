@@ -19,7 +19,7 @@ function LiveClock() {
 }
 
 export default function OwnerCalendar() {
-  const { now, getMark, marks, setMarks, sundayOff, setSundayOff } = useStore();
+  const { now, getMark, setMarks, sundayOff, setSundayOff } = useStore();
   const today = ymd(now);
   const [cursor, setCursor] = useState(() => new Date(now.getFullYear(), now.getMonth(), 1));
   const [selected, setSelected] = useState(today);

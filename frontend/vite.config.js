@@ -6,4 +6,5 @@ export default defineConfig({
   plugins: [react()],
   server: { host: true, port: 5173, allowedHosts: true },
   preview: { host: true, port: 4173, allowedHosts: true },
+  test: { environment: 'jsdom', globals: true, include: ['src/**/*.test.{js,jsx}'] },
 });
