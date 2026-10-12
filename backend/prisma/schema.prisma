@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  CASHIER
+}
+
+enum OrderStatus {
+  UNPAID
+  PROCESSING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+}
+
+enum PaymentMethod {
+  CASH
+  MIDTRANS
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+
+enum MarkType {
+  LIBUR
+  EVENT
+}
+
+model User {
+  id             String    @id @default(uuid())
+  name           String
+  role           Role
+  username       String?   @unique          // owner only
+  passwordHash   String?                    // owner only
+  pinHash        String?                    // cashier only
+  isActive       Boolean   @default(true)
+  failedPinCount Int       @default(0)
+  pinLockedUntil DateTime?
+  shifts         Shift[]
+  orders         Order[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  @@map("users")
+}
+
+model Shift {
+  id           String    @id @default(uuid())
+  cashierId    String
+  cashier      User      @relation(fields: [cashierId], references: [id])
+  businessDate DateTime  @map("business_date") @db.Date
+  startedAt    DateTime  @default(now()) @map("started_at")
+  endedAt      DateTime? @map("ended_at")
+  orders       Order[]
+  @@index([cashierId, businessDate])
+  @@index([businessDate])
+  @@map("shifts")
+}
+
+model Category {
+  id        String  @id @default(uuid())
+  name      String
+  sortOrder Int     @map("sort_order")
+  isBundle  Boolean @default(false) @map("is_bundle")
+  menus     Menu[]
+  @@index([sortOrder])
+  @@map("categories")
+}
+
+model Menu {
+  id              String    @id @default(uuid())
+  categoryId      String    @map("category_id")
+  category        Category  @relation(fields: [categoryId], references: [id])
+  name            String
+  emoji           String?
+  imageUrl        String?   @map("image_url")
+  price           Int?      // null for bundles: price derives from components
+  discountPercent Int?      @map("discount_percent")
+  deletedAt       DateTime? @map("deleted_at")
+  components      MenuComponent[] @relation("Bundle")
+  usedIn          MenuComponent[] @relation("Component")
+  orderItems      OrderItem[]
+  @@index([categoryId])
+  @@map("menus")
+}
+
+model MenuComponent {
+  bundleId    String @map("bundle_id")
+  componentId String @map("component_id")
+  qty         Int
+  bundle      Menu   @relation("Bundle", fields: [bundleId], references: [id])
+  component   Menu   @relation("Component", fields: [componentId], references: [id])
+  @@id([bundleId, componentId])
+  @@map("menu_components")
+}
+
+model Order {
+  id           String      @id @default(uuid())
+  code         String      @unique              // TRX-YYYYMMDD-0001
+  dailySeq     Int         @map("daily_seq")
+  queueNumber  String?     @map("queue_number") // "001", assigned at payment
+  businessDate DateTime    @map("business_date") @db.Date
+  orderType    OrderType   @map("order_type")
+  status       OrderStatus @default(UNPAID)
+  cashierId    String      @map("cashier_id")
+  cashier      User        @relation(fields: [cashierId], references: [id])
+  shiftId      String      @map("shift_id")
+  shift        Shift       @relation(fields: [shiftId], references: [id])
+  totalAmount  Int         @map("total_amount")
+  note         String?
+  paidAt       DateTime?   @map("paid_at")
+  items        OrderItem[]
+  payments     Payment[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  @@unique([businessDate, dailySeq])
+  @@unique([businessDate, queueNumber])
+  @@index([businessDate, status])
+  @@index([shiftId])
+  @@index([cashierId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String @id @default(uuid())
+  orderId      String @map("order_id")
+  order        Order  @relation(fields: [orderId], references: [id])
+  menuId       String @map("menu_id")
+  menu         Menu   @relation(fields: [menuId], references: [id])
+  nameSnapshot String @map("name_snapshot")
+  unitPrice    Int    @map("unit_price")
+  qty          Int
+  note         String?
+  lineTotal    Int    @map("line_total")
+  @@index([menuId])
+  @@map("order_items")
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  orderId               String        @map("order_id")
+  order                 Order         @relation(fields: [orderId], references: [id])
+  attemptNo             Int           @map("attempt_no")
+  method                PaymentMethod
+  status                PaymentStatus @default(PENDING)
+  amount                Int
+  receivedAmount        Int?          @map("received_amount")  // cash
+  changeAmount          Int?          @map("change_amount")    // cash
+  midtransOrderId       String?       @unique @map("midtrans_order_id") // {code}-{attemptNo}
+  midtransTransactionId String?       @map("midtrans_transaction_id")
+  paymentType           String?       @map("payment_type")     // qris, gopay, bank_transfer, …
+  snapToken             String?       @map("snap_token")
+  snapExpiresAt         DateTime?     @map("snap_expires_at")
+  rawPayload            Json?         @map("raw_payload")
+  failureReason         String?       @map("failure_reason")
+  flaggedForRefund      Boolean       @default(false) @map("flagged_for_refund")
+  paidAt                DateTime?     @map("paid_at")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+  @@unique([orderId, attemptNo])
+  @@map("payments")
+}
+
+model CalendarMark {
+  id   String   @id @default(uuid())
+  date DateTime @db.Date
+  type MarkType
+  name String?  // required for EVENT
+  @@unique([date])
+  @@map("calendar_marks")
+}
+
+model Setting {
+  key   String @id
+  value Json
+  @@map("settings")
+}

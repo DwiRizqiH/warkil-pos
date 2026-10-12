@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: warkil-db
+    environment:
+      POSTGRES_USER: warkil
+      POSTGRES_PASSWORD: warkil
+      POSTGRES_DB: warkil_kasir
+    ports: ['127.0.0.1:5433:5432']
+    volumes: ['warkil-db:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U warkil -d warkil_kasir']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-test:
+    image: postgres:16-alpine
+    container_name: warkil-db-test
+    environment:
+      POSTGRES_USER: warkil
+      POSTGRES_PASSWORD: warkil
+      POSTGRES_DB: warkil_kasir_test
+    ports: ['127.0.0.1:5434:5432']
+    tmpfs: ['/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U warkil -d warkil_kasir_test']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  warkil-db:

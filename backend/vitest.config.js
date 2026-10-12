@@ -1,18 +1,14 @@
 import { defineConfig } from 'vitest/config';
-
-// Environment variables for the tests. Task 3 replaces this with testEnv from src/test/
-// once the test database exists, and adds globalSetup plus fileParallelism: false.
-const env = {
-  NODE_ENV: 'test',
-  DATABASE_URL: 'postgresql://warkil:warkil@localhost:5433/warkil_kasir_test',
-  JWT_SECRET: 'test-secret-yang-panjangnya-lebih-dari-32-karakter',
-};
+import { testEnv } from './src/test/testEnv.js';
 
 export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    env,
+    env: testEnv,
+    globalSetup: ['./src/test/globalSetup.js'],
+    // Every test file shares one database, so they must not run in parallel.
+    fileParallelism: false,
     include: ['src/**/*.test.js'],
   },
 });
