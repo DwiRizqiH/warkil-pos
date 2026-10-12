@@ -18,7 +18,6 @@ export function errorHandler(err, _req, res, _next) {
     if (err.code === 'P2025') return fail(res, 404, 'NOT_FOUND', 'Data tidak ditemukan');
   }
   logger.error({ err }, 'kesalahan tak terduga');
-  // Pesan mentah tidak pernah dikirim ke klien di production — bisa memuat detail query.
   const message = process.env.NODE_ENV === 'production' ? 'Terjadi kesalahan pada server' : String(err);
   return fail(res, 500, 'INTERNAL', message);
 }

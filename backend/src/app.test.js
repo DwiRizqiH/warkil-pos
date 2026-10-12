@@ -5,8 +5,6 @@ import { createApp, TRUST_PROXY } from './app.js';
 
 const app = createApp();
 
-// Meniru request lewat nginx: klien mengirim X-Forwarded-For palsu, nginx menambahkan
-// alamat asli klien di belakangnya.
 async function ipFor(trustProxy) {
   const probe = express();
   probe.set('trust proxy', trustProxy);

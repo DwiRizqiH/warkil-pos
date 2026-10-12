@@ -10,7 +10,7 @@ const schema = z.object({
   FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),
   MIDTRANS_SERVER_KEY: z.string().default(''),
   MIDTRANS_CLIENT_KEY: z.string().default(''),
-  // z.coerce.boolean() menganggap string "false" sebagai true; enum ini memaksa nilai eksplisit.
+  // z.coerce.boolean() reads the string "false" as true; the enum forces an explicit value.
   MIDTRANS_IS_PRODUCTION: z
     .enum(['true', 'false'])
     .default('false')

@@ -11,14 +11,10 @@ import { serveStatic } from './static.js';
 
 export const TRUST_PROXY = 'loopback';
 
-// Dipakai tes dan server.js — satu-satunya cara membangun app, jadi setelan
-// trust proxy ikut diuji oleh setiap tes API.
 export function createApp() {
   const app = express();
 
-  // nginx ada di loopback yang sama dengan Node. 'loopback' mempercayai hanya hop
-  // itu, jadi req.ip = alamat asli klien, bukan X-Forwarded-For paling kiri yang
-  // bisa dipalsukan klien. Dipakai rate-limit login dan pencatatan IP.
+  // nginx sits on the same loopback, so only that hop is trusted and req.ip stays the real client address.
   app.set('trust proxy', TRUST_PROXY);
   app.disable('x-powered-by');
 

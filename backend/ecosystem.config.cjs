@@ -1,4 +1,3 @@
-// Konfigurasi PM2. Dijalankan dari folder backend/.
 module.exports = {
   apps: [
     {

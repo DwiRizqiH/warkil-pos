@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dijalankan di VPS oleh GitHub Actions setelah source di-upload.
+# Runs on the VPS, called by GitHub Actions after the source upload.
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/home/dwi/warkil-kasir}"

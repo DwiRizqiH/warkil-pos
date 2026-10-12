@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
-// Variabel environment untuk tes. Task 3 menggantinya dengan testEnv dari src/test/
-// begitu database uji ada, lalu menambahkan globalSetup dan fileParallelism: false.
+// Environment variables for the tests. Task 3 replaces this with testEnv from src/test/
+// once the test database exists, and adds globalSetup plus fileParallelism: false.
 const env = {
   NODE_ENV: 'test',
   DATABASE_URL: 'postgresql://warkil:warkil@localhost:5433/warkil_kasir_test',

@@ -16,7 +16,6 @@ export default [
     },
   },
   {
-    // ecosystem.config.cjs milik PM2: CommonJS, jadi `__dirname` dan `module` sah di sini.
     files: ['**/*.cjs'],
     languageOptions: {
       ecmaVersion: 2023,

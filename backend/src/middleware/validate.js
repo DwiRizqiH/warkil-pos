@@ -5,7 +5,7 @@ export function validate(schemas) {
   return (req, _res, next) => {
     try {
       if (schemas.body) req.body = schemas.body.parse(req.body);
-      // express 4 meng-cache req.query di objek yang sama; menugaskan ulang tidak berpengaruh.
+      // Express 4 caches req.query on the same object; reassigning it has no effect.
       if (schemas.query) Object.assign(req.query, schemas.query.parse(req.query));
       if (schemas.params) Object.assign(req.params, schemas.params.parse(req.params));
       next();
