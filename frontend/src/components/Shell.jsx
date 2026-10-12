@@ -49,6 +49,7 @@ export default function Shell({ role, home, items, right, children }) {
               <NavLink
                 key={it.to}
                 to={it.to}
+                end={it.end}
                 className={({ isActive }) => 'drawer-item' + (isActive ? ' active' : '')}
               >
                 <Icon name={it.icon} />

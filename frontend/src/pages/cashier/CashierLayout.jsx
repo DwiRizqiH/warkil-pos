@@ -11,6 +11,7 @@ export default function CashierLayout() {
   if (!session) return <Navigate to="/kasir/login" replace />;
 
   const items = [
+    { to: '/kasir', label: 'Buat Pesanan', icon: 'cart', end: true },
     { to: '/kasir/penjualan', label: 'Penjualan', icon: 'receipt' },
     { to: '/kasir/pesanan', label: 'Pesanan Kasir', icon: 'cart' },
     { to: '/kasir/online', label: 'Pesanan Online', icon: 'bag' },
