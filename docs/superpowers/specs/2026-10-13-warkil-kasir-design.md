@@ -260,10 +260,15 @@ rule the mockup's day grouping already had.
 
 ### 5.6 Status flow
 
-`UNPAID → PROCESSING → READY → COMPLETED`, plus `UNPAID → CANCELLED`. Enforced in a single
-service function; any other transition is rejected with `409`. An order becomes `PROCESSING`,
-gets its queue number, and starts counting as a sale only when payment is confirmed. Only
-`PROCESSING`, `READY` and `COMPLETED` orders exist on the Pesanan Kasir board.
+`UNPAID → PROCESSING → READY → COMPLETED`, plus `UNPAID → CANCELLED`, plus `UNPAID → READY`.
+Enforced in a single service function; any other transition is rejected with `409`. An order gets
+its queue number, and starts counting as a sale, only when payment is confirmed.
+
+A cashier order is created and paid in one step at the counter, so confirming that payment moves it
+straight from `UNPAID` to `READY` and skips `PROCESSING` (decision 16): the cashier has just handed
+over the food, and the separate "Tandai siap" tap was removed from the mockup. `PROCESSING` stays a
+valid state and `PROCESSING → READY` stays available for an order that is deliberately moved there.
+`READY` and `COMPLETED` orders — and `PROCESSING` ones, if any — appear on the Pesanan Kasir board.
 
 ### 5.7 Cash
 
@@ -450,7 +455,8 @@ Tailwind, no UI kit. The docs' Tailwind references are corrected in `docs/`.
 1. **Cashier navigation** — `CashierLayout` gains "Buat Pesanan" as its first item pointing at
    `/kasir` with exact-match active state, so the POS is reachable after opening another screen.
    The cart moves out of `Pos`'s local state into `CartContext` persisted in sessionStorage, so an
-   in-progress order survives navigation. It is cleared after a successful payment or "Kosongkan".
+   in-progress order survives navigation. It is cleared after a successful payment or "Kosongkan",
+   and on logout — the tablet is shared, so the next cashier must not inherit it (decision 17).
 2. **Pesanan Online removed** — page, route, nav item, `PLATFORMS`, `DRIVERS`, the simulate
    function, `channel`/`driver`/`ref` fields, `sourceLabel`, the Sumber filter chips, the separate
    online queue and its styling (`.queue-big.online`, `.platform-*`, `.pcode`, `.driver`), and all
@@ -548,6 +554,8 @@ are hashed. The Midtrans server key never reaches the frontend.
 | 13 | Demo history | Dev-only generator, 120 days |
 | 14 | PIN policy | Seed `1234`; 5 failures → 15 minute lock |
 | 15 | Styling and docs | No Tailwind — keep `index.css`; `docs/` rewritten to match this spec |
+| 16 | Paid order status | An order paid at creation goes straight to `READY`; the nota prints immediately, with no second "Tandai siap" step |
+| 17 | Cart on logout | Logging out empties the cashier cart, so the next cashier on the shared tablet starts clean |
 
 ## 14. Delivery phases
 
