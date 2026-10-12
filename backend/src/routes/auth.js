@@ -37,6 +37,15 @@ function setSessionCookie(res, token) {
 
 export const authRouter = Router();
 
+// Public: the cashier login screen only needs names to choose from.
+authRouter.get('/cashiers', async (_req, res, next) => {
+  try {
+    ok(res, await prisma.user.findMany({ where: { role: 'CASHIER', isActive: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }));
+  } catch (err) {
+    next(err);
+  }
+});
+
 authRouter.post(
   '/owner/login',
   loginLimiter,
