@@ -22,7 +22,8 @@ export default function PayModal({ onClose, onDone }) {
     const t = createOrder({
       orderType: cart.orderType,
       payment,
-      status: 'proses',
+      // Sudah dibayar berarti pesanan siap: kasir tidak perlu menandainya lagi dari papan pesanan.
+      status: 'siap',
       cashier: session?.cashier,
       items: cart.lines.map(({ id, name, qty, price, note }) => ({ id, name, qty, price, note })),
     });
