@@ -74,7 +74,7 @@ export function priceOf(menu, menus) {
   return menu.price;
 }
 
-/* ---------- Jadwal & shift (dummy) ---------- */
+/* ---------- Jadwal & shift ---------- */
 
 export function scheduledCashier(date, idx) {
   const n = Math.floor(parseYmd(date).getTime() / 86400000);
@@ -87,7 +87,7 @@ export function shiftTimes(date, idx) {
   return { login: `15:${pad(6 + (h % 5))}`, logout: `22:${pad((h >> 3) % 14)}` };
 }
 
-/* ---------- Generator riwayat transaksi (dummy, deterministik) ---------- */
+/* ---------- Generator riwayat transaksi (deterministik) ---------- */
 
 const WEIGHTS = {
   m1: 14, m2: 10, m3: 5, m4: 6, m5: 4, m6: 4,

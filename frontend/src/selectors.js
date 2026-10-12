@@ -167,3 +167,9 @@ export function sortMenus(list, rank, catOrder) {
     return a.name.localeCompare(b.name, 'id');
   });
 }
+
+// "Semua" memakai urutan tampilan POS: best seller di atas, lalu urutan kategori, lalu nama.
+export function menusForCategory(menus, catId, rank, catOrder) {
+  if (catId === 'all') return sortMenus(menus, rank, catOrder);
+  return sortMenus(menus.filter((m) => m.cat === catId), rank);
+}

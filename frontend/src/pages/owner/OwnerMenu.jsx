@@ -4,7 +4,7 @@ import Modal from '../../components/Modal.jsx';
 import Icon from '../../components/Icon.jsx';
 import { useStore } from '../../store.jsx';
 import { grossOf, priceOf } from '../../data.js';
-import { sortMenus } from '../../selectors.js';
+import { menusForCategory } from '../../selectors.js';
 import { rupiah } from '../../utils.js';
 
 function MenuForm({ initial, defaultCat, menus, categories, onSave, onClose }) {
@@ -187,22 +187,19 @@ function CategoryManager({ categories, menus, setCategories, onClose }) {
 }
 
 export default function OwnerMenu() {
-  const { menus, setMenus, categories, setCategories, best, hasMonthData, demoShort, setDemoShort, dataDays } = useStore();
-  const [catId, setCatId] = useState(categories[0]?.id);
+  const { menus, setMenus, categories, setCategories, best, hasMonthData, dataDays } = useStore();
+  const [catId, setCatId] = useState('all');
   const [form, setForm] = useState(null); // { menu? }
   const [del, setDel] = useState(null);
   const [catModal, setCatModal] = useState(false);
 
-  const activeCat = categories.find((c) => c.id === catId) || categories[0];
   const rank = useMemo(() => new Map(best.map((b) => [b.id, b])), [best]);
-  const list = useMemo(
-    () => sortMenus(menus.filter((m) => m.cat === activeCat?.id), rank),
-    [menus, activeCat, rank]
-  );
+  const catOrder = useMemo(() => new Map(categories.map((c, i) => [c.id, i])), [categories]);
+  const list = useMemo(() => menusForCategory(menus, catId, rank, catOrder), [menus, catId, rank, catOrder]);
+  const defaultCat = catId === 'all' ? categories[0]?.id : catId;
 
   const save = (menu) => {
     setMenus((prev) => (prev.some((m) => m.id === menu.id) ? prev.map((m) => (m.id === menu.id ? menu : m)) : [...prev, menu]));
-    setCatId(menu.cat);
     setForm(null);
   };
 
@@ -221,11 +218,6 @@ export default function OwnerMenu() {
       <section className="card card-pad stack">
         <div className="spread wrap">
           <h2 className="section-title">★ Best Seller</h2>
-          <label className="switch sm" title="Simulasi untuk demo">
-            <input type="checkbox" checked={demoShort} onChange={(e) => setDemoShort(e.target.checked)} />
-            <span className="track" />
-            <span>Demo: data &lt; 1 bulan</span>
-          </label>
         </div>
         {hasMonthData ? (
           <>
@@ -254,15 +246,18 @@ export default function OwnerMenu() {
       </section>
 
       <div className="chips scroll">
+        <button className={'chip' + (catId === 'all' ? ' active' : '')} onClick={() => setCatId('all')}>
+          Semua <span className="chip-n">{menus.length}</span>
+        </button>
         {categories.map((c) => (
-          <button key={c.id} className={'chip' + (c.id === activeCat?.id ? ' active' : '')} onClick={() => setCatId(c.id)}>
+          <button key={c.id} className={'chip' + (c.id === catId ? ' active' : '')} onClick={() => setCatId(c.id)}>
             {c.name} <span className="chip-n">{menus.filter((m) => m.cat === c.id).length}</span>
           </button>
         ))}
       </div>
 
       {list.length === 0 ? (
-        <div className="card card-pad empty-note">Belum ada menu di kategori ini.</div>
+        <div className="card card-pad empty-note">Belum ada menu.</div>
       ) : (
         <div className="menu-grid">
           {list.map((m) => (
@@ -289,7 +284,7 @@ export default function OwnerMenu() {
       {form && (
         <MenuForm
           initial={form.menu}
-          defaultCat={activeCat?.id}
+          defaultCat={defaultCat}
           menus={menus}
           categories={categories}
           onSave={save}

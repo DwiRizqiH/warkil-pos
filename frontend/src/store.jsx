@@ -47,7 +47,7 @@ function usePersist(key, init) {
   return [val, set];
 }
 
-// Riwayat transaksi dummy (dibuat sekali saat aplikasi dimuat)
+// Riwayat transaksi (dibuat sekali saat aplikasi dimuat)
 const BASE = generateHistory(DEFAULT_MENUS, new Date());
 
 export function StoreProvider({ children }) {
@@ -58,7 +58,6 @@ export function StoreProvider({ children }) {
   const [extra, setExtra] = usePersist('extraTx', []);
   const [overrides, setOverrides] = usePersist('overrides', {});
   const [session, setSession] = usePersist('session', null);
-  const [demoShort, setDemoShort] = usePersist('demoShort', false);
   const [toast, setToast] = useState(null);
   const now = useNow(15000);
   const todayStr = ymd(now);
@@ -72,7 +71,7 @@ export function StoreProvider({ children }) {
   const menusById = useMemo(() => new Map(menus.map((m) => [m.id, m])), [menus]);
 
   const dataDays = daysBetween(BASE[0].date, todayStr) + 1;
-  const hasMonthData = dataDays >= 30 && !demoShort;
+  const hasMonthData = dataDays >= 30;
   const best = useMemo(
     () => (hasMonthData ? bestSellers(index, new Date(), menusById) : []),
     [hasMonthData, index, todayStr, menusById] // eslint-disable-line react-hooks/exhaustive-deps
@@ -161,11 +160,11 @@ export function StoreProvider({ children }) {
     () => ({
       menus, setMenus, categories, setCategories, marks, setMarks, sundayOff, setSundayOff,
       getMark, allTx, index, now, session, login, logout, createOrder, updateTx,
-      best, hasMonthData, demoShort, setDemoShort, dataDays, notify,
+      best, hasMonthData, dataDays, notify,
     }),
     [
       menus, categories, marks, sundayOff, getMark, allTx, index, now, session, login, logout,
-      createOrder, updateTx, best, hasMonthData, demoShort, dataDays, notify,
+      createOrder, updateTx, best, hasMonthData, dataDays, notify,
     ] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
