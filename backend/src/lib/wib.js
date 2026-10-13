@@ -22,20 +22,8 @@ export function addDays(date, days) {
   return new Date(Date.parse(`${date}T00:00:00.000Z`) + days * DAY_MS).toISOString().slice(0, 10);
 }
 
-export function startOfWeek(date) {
-  const day = new Date(`${date}T00:00:00.000Z`).getUTCDay();
-  return addDays(date, -((day + 6) % 7));
-}
-
-export const monthOf = (date) => date.slice(0, 7);
-
 export function lastNDates(date, n) {
   return Array.from({ length: n }, (_, index) => addDays(date, index - (n - 1)));
-}
-
-export function wibTime(at) {
-  const wib = shifted(at);
-  return `${pad2(wib.getUTCHours())}:${pad2(wib.getUTCMinutes())}`;
 }
 
 export function shiftIndexOf(time) {
