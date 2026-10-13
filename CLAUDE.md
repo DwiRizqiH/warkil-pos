@@ -42,7 +42,7 @@ kerja biasa, dan jangan menjalankan `seed:demo` di production.
 - Semua input divalidasi Zod di batas route. Server menghitung harga, status dan
   nomor antrian sendiri — nilai dari klien tidak pernah dipercaya.
 - Endpoint hanya mengembalikan data yang dibutuhkan perannya. `pinHash`,
-  `passwordHash` dan `failedAttempts` tidak pernah keluar dari server.
+  `passwordHash` dan `failedPinCount` tidak pernah keluar dari server.
 - Rahasia tidak masuk repo. `.env` ada di server, repo hanya memuat
   `.env.example`.
 - Angka rupiah di UI lewat `rupiah()` di `frontend/src/utils.js`.
