@@ -44,6 +44,19 @@ describe('ensureOpenShift', () => {
     expect(second.id).not.toBe(first.id);
     expect(dayOf(second.businessDate)).toBe('2026-10-14');
   });
+
+  it('menutup shift kembar hari ini pada jam login, bukan di akhir hari', async () => {
+    await prisma.shift.create({
+      data: { cashierId, startedAt: at('2026-10-13T00:30:00Z'), businessDate: at('2026-10-13T00:00:00Z') },
+    });
+    const current = await prisma.shift.create({
+      data: { cashierId, startedAt: at('2026-10-13T01:00:00Z'), businessDate: at('2026-10-13T00:00:00Z') },
+    });
+    const shift = await ensureOpenShift(cashierId, at('2026-10-13T05:00:00Z'));
+    expect(shift.id).toBe(current.id);
+    const sibling = await prisma.shift.findFirstOrThrow({ where: { id: { not: current.id } } });
+    expect(sibling.endedAt.toISOString()).toBe('2026-10-13T05:00:00.000Z');
+  });
 });
 
 describe('closeAllOpenShifts', () => {

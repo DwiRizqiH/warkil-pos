@@ -13,10 +13,9 @@ export async function ensureOpenShift(cashierId, at = new Date()) {
 
     for (const stale of open) {
       if (stale.id === current?.id) continue;
-      await tx.shift.update({
-        where: { id: stale.id },
-        data: { endedAt: businessDayEnd(dayOf(stale.businessDate)) },
-      });
+      const day = dayOf(stale.businessDate);
+      // A same-day twin was open until this login took over; only an older day ends at that day's close.
+      await tx.shift.update({ where: { id: stale.id }, data: { endedAt: day === date ? at : businessDayEnd(day) } });
     }
 
     if (current) return current;
