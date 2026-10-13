@@ -4,11 +4,13 @@ import Modal from '../../components/Modal.jsx';
 import Icon from '../../components/Icon.jsx';
 import { ReceiptModal } from '../../components/Receipt.jsx';
 import { useStore } from '../../store.jsx';
+import { useAuth } from '../../auth/AuthContext.jsx';
 import { useCart } from '../../context/CartContext.jsx';
 import { rupiah } from '../../utils.js';
 
 export default function PayModal({ onClose, onDone }) {
-  const { createOrder, session } = useStore();
+  const { createOrder } = useStore();
+  const { user } = useAuth();
   const cart = useCart();
   const [step, setStep] = useState('choose'); // choose | cash | qris | done
   const [received, setReceived] = useState('');
@@ -24,7 +26,7 @@ export default function PayModal({ onClose, onDone }) {
       payment,
       // Sudah dibayar berarti pesanan siap: kasir tidak perlu menandainya lagi dari papan pesanan.
       status: 'siap',
-      cashier: session?.cashier,
+      cashier: user?.name,
       items: cart.lines.map(({ id, name, qty, price, note }) => ({ id, name, qty, price, note })),
     });
     setTx(t);

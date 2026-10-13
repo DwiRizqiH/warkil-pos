@@ -7,14 +7,14 @@ import { getShifts, rangeSum } from '../../selectors.js';
 import { MONTHS_ID, addDays, fmtDateLong, rupiah, startOfWeek, ymd } from '../../utils.js';
 
 export default function OwnerDashboard() {
-  const { index, now, session } = useStore();
+  const { index, now } = useStore();
   const nav = useNavigate();
   const today = ymd(now);
   const monthFrom = today.slice(0, 8) + '01';
   const month = rangeSum(index, monthFrom, today);
   const weekStart = startOfWeek(now);
   const week = rangeSum(index, ymd(weekStart), today);
-  const shifts = getShifts(index, today, { session, now });
+  const shifts = getShifts(index, today, { now });
   const weekLabel = `${weekStart.getDate()} ${MONTHS_ID[weekStart.getMonth()].slice(0, 3)} – ${addDays(weekStart, 6).getDate()} ${MONTHS_ID[addDays(weekStart, 6).getMonth()].slice(0, 3)}`;
 
   return (

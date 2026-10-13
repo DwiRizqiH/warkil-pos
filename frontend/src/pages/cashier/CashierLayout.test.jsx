@@ -2,35 +2,35 @@ import { render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { vi } from 'vitest';
-import { CartProvider } from '../../context/CartContext.jsx';
 
 vi.mock('../../store.jsx', () => ({
-  useStore: () => ({ session: { cashier: 'Siti Rahma' }, logout: vi.fn(), now: new Date(2026, 9, 13, 10, 0) }),
+  useStore: () => ({ now: new Date(2026, 9, 13, 10, 0) }),
+}));
+vi.mock('../../auth/AuthContext.jsx', () => ({
+  useAuth: () => ({
+    user: { name: 'Siti Rahma', role: 'CASHIER' },
+    logout: { mutateAsync: vi.fn(async () => {}) },
+  }),
 }));
 vi.mock('../../components/EventBanner.jsx', () => ({ default: () => null }));
 
 const { default: CashierLayout } = await import('./CashierLayout.jsx');
 
-// Layout kasir memakai keranjang (dikosongkan saat log out), jadi providernya ikut dipasang.
 const renderAt = (path) =>
   render(
-    <CartProvider>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path="/kasir" element={<CashierLayout />}>
-            <Route index element={<div>pos</div>} />
-            <Route path="penjualan" element={<div>penjualan</div>} />
-          </Route>
-          <Route path="/kasir/login" element={<div>login</div>} />
-        </Routes>
-      </MemoryRouter>
-    </CartProvider>
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/kasir" element={<CashierLayout />}>
+          <Route index element={<div>pos</div>} />
+          <Route path="penjualan" element={<div>penjualan</div>} />
+        </Route>
+        <Route path="/kasir/login" element={<div>login</div>} />
+      </Routes>
+    </MemoryRouter>
   );
 
-// Drawer tertutup punya aria-hidden, jadi link di dalamnya harus dicari dengan { hidden: true }.
+// The closed drawer carries aria-hidden, so its links are only reachable with { hidden: true }.
 const navLink = (name) => screen.getByRole('link', { name, hidden: true });
-
-beforeEach(() => sessionStorage.clear());
 
 test('has a "Buat Pesanan" entry that is active on the POS page', () => {
   renderAt('/kasir');
@@ -45,13 +45,10 @@ test('"Buat Pesanan" is not active on another cashier page, so it can be clicked
   expect(navLink(/penjualan/i).className).toContain('active');
 });
 
-// Tablet kasir dipakai bergantian: keranjang kasir sebelumnya tidak boleh ikut ke kasir berikutnya.
-test('logging out empties the cart so the next cashier does not inherit it', () => {
-  sessionStorage.setItem(
-    'kikil:cart',
-    JSON.stringify({ lines: [{ id: 'm1', name: 'Sop Kikil', price: 25000, qty: 2, note: '' }], orderType: 'dine' })
-  );
+test('logging out returns to the login screen', async () => {
   renderAt('/kasir');
-  act(() => screen.getByRole('button', { name: /log out/i, hidden: true }).click());
-  expect(JSON.parse(sessionStorage.getItem('kikil:cart')).lines).toEqual([]);
+  await act(async () => {
+    screen.getByRole('button', { name: /log out/i, hidden: true }).click();
+  });
+  expect(screen.getByText('login')).toBeTruthy();
 });

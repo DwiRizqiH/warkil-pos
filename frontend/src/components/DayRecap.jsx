@@ -7,11 +7,11 @@ import { fmtDateLong, rupiah } from '../utils.js';
 
 // Rekap satu hari: 3 ringkasan + ID card tiap shift (dipakai di kalender pemilik)
 export default function DayRecap({ date }) {
-  const { index, now, session, getMark } = useStore();
+  const { index, now, getMark } = useStore();
   const nav = useNavigate();
   const mark = getMark(date);
   const sum = index.daily.get(date) || { count: 0, qty: 0, total: 0 };
-  const shifts = getShifts(index, date, { session, now });
+  const shifts = getShifts(index, date, { now });
 
   return (
     <section className="stack">

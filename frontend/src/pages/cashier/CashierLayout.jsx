@@ -1,16 +1,14 @@
-import { Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import Shell from '../../components/Shell.jsx';
 import EventBanner from '../../components/EventBanner.jsx';
 import { useStore } from '../../store.jsx';
-import { useCart } from '../../context/CartContext.jsx';
+import { useAuth } from '../../auth/AuthContext.jsx';
 import { pad } from '../../utils.js';
 
 export default function CashierLayout() {
-  const { session, logout, now } = useStore();
-  const cart = useCart();
+  const { now } = useStore();
+  const { user, logout } = useAuth();
   const nav = useNavigate();
-
-  if (!session) return <Navigate to="/kasir/login" replace />;
 
   const items = [
     { to: '/kasir', label: 'Buat Pesanan', icon: 'cart', end: true },
@@ -19,10 +17,8 @@ export default function CashierLayout() {
     {
       label: 'Log out',
       icon: 'logout',
-      onClick: () => {
-        // Tablet dipakai bergantian: keranjang dikosongkan supaya kasir berikutnya tidak mewarisinya.
-        cart.dispatch({ type: 'clear' });
-        logout();
+      onClick: async () => {
+        await logout.mutateAsync();
         nav('/kasir/login');
       },
     },
@@ -35,7 +31,7 @@ export default function CashierLayout() {
       items={items}
       right={
         <>
-          <span className="chip dark-chip">{session.cashier}</span>
+          <span className="chip dark-chip">{user?.name}</span>
           <span className="top-clock">{pad(now.getHours())}:{pad(now.getMinutes())}</span>
         </>
       }

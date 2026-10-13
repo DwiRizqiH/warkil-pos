@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Landing from './pages/Landing.jsx';
+import RequireRole from './auth/RequireRole.jsx';
 import OwnerLayout from './pages/owner/OwnerLayout.jsx';
 import OwnerDashboard from './pages/owner/OwnerDashboard.jsx';
+import OwnerLogin from './pages/owner/OwnerLogin.jsx';
 import OwnerCalendar from './pages/owner/OwnerCalendar.jsx';
 import OwnerMenu from './pages/owner/OwnerMenu.jsx';
 import OwnerSales from './pages/owner/OwnerSales.jsx';
@@ -17,7 +19,15 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
 
-      <Route path="/pemilik" element={<OwnerLayout />}>
+      <Route path="/pemilik/login" element={<OwnerLogin />} />
+      <Route
+        path="/pemilik"
+        element={
+          <RequireRole role="OWNER" loginPath="/pemilik/login">
+            <OwnerLayout />
+          </RequireRole>
+        }
+      >
         <Route index element={<OwnerDashboard />} />
         <Route path="kalender" element={<OwnerCalendar />} />
         <Route path="menu" element={<OwnerMenu />} />
@@ -26,7 +36,14 @@ export default function App() {
       </Route>
 
       <Route path="/kasir/login" element={<CashierLogin />} />
-      <Route path="/kasir" element={<CashierLayout />}>
+      <Route
+        path="/kasir"
+        element={
+          <RequireRole role="CASHIER" loginPath="/kasir/login">
+            <CashierLayout />
+          </RequireRole>
+        }
+      >
         <Route index element={<Pos />} />
         <Route path="pesanan" element={<DineOrders />} />
         <Route path="penjualan" element={<CashierSales />} />

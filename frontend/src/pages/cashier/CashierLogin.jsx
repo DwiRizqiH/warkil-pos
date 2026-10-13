@@ -1,20 +1,33 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { CASHIERS } from '../../data.js';
-import { useStore } from '../../store.jsx';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../api/client.js';
+import { useAuth } from '../../auth/AuthContext.jsx';
 
 export default function CashierLogin() {
-  const { session, login } = useStore();
+  const { user, loginCashier } = useAuth();
   const nav = useNavigate();
-  const [name, setName] = useState(CASHIERS[0]);
+  const [cashierId, setCashierId] = useState('');
   const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
 
-  if (session) return <Navigate to="/kasir" replace />;
+  const { data: cashiers = [], isLoading } = useQuery({
+    queryKey: ['cashiers', 'public'],
+    queryFn: () => api.get('/auth/cashiers'),
+  });
 
-  const submit = (e) => {
+  if (user) return <Navigate to="/kasir" replace />;
+
+  const submit = async (e) => {
     e.preventDefault();
-    login(name);
-    nav('/kasir');
+    setError('');
+    try {
+      await loginCashier.mutateAsync({ cashierId, pin });
+      nav('/kasir', { replace: true });
+    } catch (err) {
+      setError(err.message);
+      setPin('');
+    }
   };
 
   return (
@@ -25,15 +38,24 @@ export default function CashierLogin() {
         <p className="muted">Masuk di awal shift. Jangan lupa log out saat shift selesai.</p>
 
         <label className="label">Nama kasir</label>
-        <div className="pick-list">
-          {CASHIERS.map((c) => (
-            <button type="button" key={c} className={'pick' + (c === name ? ' on' : '')} onClick={() => setName(c)}>
-              {c}
-            </button>
-          ))}
-        </div>
+        {isLoading ? (
+          <p className="muted sm">Memuat daftar kasir…</p>
+        ) : (
+          <div className="pick-list">
+            {cashiers.map((cashier) => (
+              <button
+                type="button"
+                key={cashier.id}
+                className={'pick' + (cashier.id === cashierId ? ' on' : '')}
+                onClick={() => setCashierId(cashier.id)}
+              >
+                {cashier.name}
+              </button>
+            ))}
+          </div>
+        )}
 
-        <label className="label">PIN (ketik 4 angka apa saja)</label>
+        <label className="label">PIN</label>
         <input
           className="input pin"
           inputMode="numeric"
@@ -44,7 +66,9 @@ export default function CashierLogin() {
           onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
         />
 
-        <button className="btn btn-primary btn-lg btn-block" disabled={pin.length < 4}>
+        {error && <p className="muted sm">{error}</p>}
+
+        <button className="btn btn-primary btn-lg btn-block" disabled={!cashierId || pin.length < 4 || loginCashier.isPending}>
           Mulai shift
         </button>
         <Link to="/" className="muted-link center">← Kembali</Link>

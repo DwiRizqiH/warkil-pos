@@ -57,7 +57,6 @@ export function StoreProvider({ children }) {
   const [sundayOff, setSundayOff] = usePersist('sundayOff', false);
   const [extra, setExtra] = usePersist('extraTx', []);
   const [overrides, setOverrides] = usePersist('overrides', {});
-  const [session, setSession] = usePersist('session', null);
   const now = useNow(15000);
   const todayStr = ymd(now);
 
@@ -80,8 +79,6 @@ export function StoreProvider({ children }) {
   txRef.current = allTx;
   const extraRef = useRef(extra);
   extraRef.current = extra;
-  const sessionRef = useRef(session);
-  sessionRef.current = session;
 
   const nextSeq = () => {
     const today = ymd(new Date());
@@ -104,9 +101,8 @@ export function StoreProvider({ children }) {
     const d = new Date();
     const date = ymd(d);
     const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    const s = sessionRef.current;
     const cashier =
-      o.cashier || (s && s.date === date ? s.cashier : scheduledCashier(date, shiftIndexOf(time)));
+      o.cashier || scheduledCashier(date, shiftIndexOf(time));
     const tx = {
       note: '',
       orderType: 'dine',
@@ -140,25 +136,16 @@ export function StoreProvider({ children }) {
     [marks, sundayOff]
   );
 
-  const login = useCallback(
-    (cashier) => {
-      const d = new Date();
-      setSession({ cashier, date: ymd(d), loginTime: `${pad(d.getHours())}:${pad(d.getMinutes())}` });
-    },
-    [setSession]
-  );
-  const logout = useCallback(() => setSession(null), [setSession]);
-
   const value = useMemo(
     () => ({
       menus, setMenus, categories, setCategories, marks, setMarks, sundayOff, setSundayOff,
-      getMark, allTx, index, now, session, login, logout, createOrder, updateTx,
+      getMark, allTx, index, now, createOrder, updateTx,
       best, hasMonthData, dataDays,
     }),
     [
-      menus, categories, marks, sundayOff, getMark, allTx, index, now, session, login, logout,
-      createOrder, updateTx, best, hasMonthData, dataDays,
-    ] // eslint-disable-line react-hooks/exhaustive-deps
+      menus, setMenus, categories, setCategories, marks, setMarks, sundayOff, setSundayOff,
+      getMark, allTx, index, now, createOrder, updateTx, best, hasMonthData, dataDays,
+    ]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

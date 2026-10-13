@@ -7,7 +7,7 @@ import { cashierTotals, getShifts, orderTypeLabel, txQty } from '../../selectors
 import { MONTHS_ID, fmtDateLong, parseYmd, rupiah, ymd } from '../../utils.js';
 
 export default function OwnerPerformance() {
-  const { index, now, session, getMark } = useStore();
+  const { index, now, getMark } = useStore();
   const [params, setParams] = useSearchParams();
   const today = ymd(now);
   const selected = params.get('date') || today;
@@ -17,7 +17,7 @@ export default function OwnerPerformance() {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
 
-  const ctx = { session, now };
+  const ctx = { now };
   const monthFrom = today.slice(0, 8) + '01';
   const top = cashierTotals(index, monthFrom, today, ctx).slice(0, 2);
   const shifts = getShifts(index, selected, ctx);
