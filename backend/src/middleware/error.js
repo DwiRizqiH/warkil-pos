@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { env } from '../config/env.js';
 import { logger } from '../lib/logger.js';
 import { AppError } from '../lib/errors.js';
 
@@ -18,6 +19,6 @@ export function errorHandler(err, _req, res, _next) {
     if (err.code === 'P2025') return fail(res, 404, 'NOT_FOUND', 'Data tidak ditemukan');
   }
   logger.error({ err }, 'kesalahan tak terduga');
-  const message = process.env.NODE_ENV === 'production' ? 'Terjadi kesalahan pada server' : String(err);
+  const message = env.NODE_ENV === 'production' ? 'Terjadi kesalahan pada server' : String(err);
   return fail(res, 500, 'INTERNAL', message);
 }
