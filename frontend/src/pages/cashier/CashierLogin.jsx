@@ -16,7 +16,9 @@ export default function CashierLogin() {
     queryFn: () => api.get('/auth/cashiers'),
   });
 
-  if (user) return <Navigate to="/kasir" replace />;
+  // Only a cashier session turns this screen away: an owner who is still signed in can hand the
+  // tablet over by letting the next cashier start a shift here.
+  if (user?.role === 'CASHIER') return <Navigate to="/kasir" replace />;
 
   const submit = async (e) => {
     e.preventDefault();

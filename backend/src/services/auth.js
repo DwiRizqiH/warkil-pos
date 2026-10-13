@@ -8,9 +8,15 @@ import { ensureOpenShift } from './shifts.js';
 const MAX_ATTEMPTS = 5;
 const LOCK_MINUTES = 15;
 const SESSION_HOURS = 12;
+// The owner username is public and there is only one owner row, so a hard lock hands anyone on the
+// network a free way to keep the owner out of his own reports. Slow the guesses down instead.
+const OWNER_SLOWDOWN_MS = 300;
+const OWNER_MAX_SLOWDOWN_STEPS = 5;
 
 export const hashSecret = (value) => bcrypt.hash(value, 10);
 export const verifySecret = (value, hash) => bcrypt.compare(value, hash);
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const sign = (payload) => jwt.sign(payload, env.JWT_SECRET, { expiresIn: `${SESSION_HOURS}h` });
 
@@ -23,18 +29,19 @@ export function verifySession(token) {
 }
 
 // The lockout counter lives on the user row, not in process memory, so a restart does not clear it.
-async function registerFailure(userId, at) {
+async function registerFailure(userId, at, { lock }) {
   const user = await prisma.user.update({
     where: { id: userId },
     data: { failedPinCount: { increment: 1 } },
     select: { failedPinCount: true },
   });
-  if (user.failedPinCount >= MAX_ATTEMPTS) {
+  if (lock && user.failedPinCount >= MAX_ATTEMPTS) {
     await prisma.user.update({
       where: { id: userId },
       data: { failedPinCount: 0, pinLockedUntil: new Date(at.getTime() + LOCK_MINUTES * 60_000) },
     });
   }
+  return user.failedPinCount;
 }
 
 function assertUsable(user, at) {
@@ -52,7 +59,7 @@ export async function loginCashier(cashierId, pin, at = new Date()) {
   assertUsable(cashier, at);
 
   if (!(await verifySecret(pin, cashier.pinHash))) {
-    await registerFailure(cashier.id, at);
+    await registerFailure(cashier.id, at, { lock: true });
     throw unauthorized('PIN salah');
   }
 
@@ -69,7 +76,8 @@ export async function loginOwner(username, password, at = new Date()) {
   assertUsable(owner, at);
 
   if (!(await verifySecret(password, owner.passwordHash))) {
-    await registerFailure(owner.id, at);
+    const failures = await registerFailure(owner.id, at, { lock: false });
+    await delay(Math.min(failures, OWNER_MAX_SLOWDOWN_STEPS) * OWNER_SLOWDOWN_MS);
     throw unauthorized('Username atau password salah');
   }
 

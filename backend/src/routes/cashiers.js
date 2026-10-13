@@ -48,6 +48,12 @@ cashiersRouter.patch(
     try {
       const cashier = await prisma.user.findFirst({ where: { id: req.params.id, role: 'CASHIER' } });
       if (!cashier) throw notFound('Kasir tidak ditemukan');
+      if (req.body.name) {
+        const taken = await prisma.user.findFirst({
+          where: { role: 'CASHIER', name: req.body.name, id: { not: cashier.id } },
+        });
+        if (taken) throw conflict('Nama kasir sudah dipakai');
+      }
       await prisma.user.update({ where: { id: cashier.id }, data: { name: req.body.name, isActive: req.body.isActive } });
       ok(res, await prisma.user.findUniqueOrThrow({ where: { id: cashier.id }, select: publicFields }));
     } catch (err) {

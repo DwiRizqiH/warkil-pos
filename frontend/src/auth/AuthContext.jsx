@@ -38,12 +38,16 @@ export function AuthProvider({ children }) {
     onSuccess: onLogin,
   });
 
+  const forgetSession = () => {
+    cart.dispatch({ type: 'clear' });
+    client.setQueryData(['session'], null);
+  };
+
   const logout = useMutation({
     mutationFn: () => api.post('/auth/logout'),
-    onSuccess: () => {
-      cart.dispatch({ type: 'clear' });
-      client.setQueryData(['session'], null);
-    },
+    onSuccess: forgetSession,
+    // A session that expired overnight answers 401, and the tablet is logged out either way.
+    onError: forgetSession,
   });
 
   const value = useMemo(

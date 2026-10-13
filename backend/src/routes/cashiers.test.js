@@ -75,6 +75,23 @@ describe('manajemen kasir', () => {
     expect(res.status).toBe(404);
   });
 
+  // The picker shows nothing but the name, so two rows with one name would leave the cashier
+  // choosing between two identical buttons.
+  it('menolak nama yang sudah dipakai kasir lain saat mengganti nama', async () => {
+    const other = await prisma.user.create({
+      data: { role: 'CASHIER', name: 'Budi Santoso', pinHash: await hashSecret('1234') },
+    });
+    const res = await request(app).patch(`/api/cashiers/${cashierId}`).set('Cookie', ownerCookie).send({ name: 'Budi Santoso' });
+    expect(res.status).toBe(409);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: other.id } })).name).toBe('Budi Santoso');
+  });
+
+  it('menerima nama yang tidak berubah saat kasir itu sendiri diedit', async () => {
+    const res = await request(app).patch(`/api/cashiers/${cashierId}`).set('Cookie', ownerCookie).send({ name: 'Siti Rahma', isActive: true });
+    expect(res.status).toBe(200);
+    expect(res.body.data.name).toBe('Siti Rahma');
+  });
+
   it('mengganti PIN kasir dan membuka kuncinya', async () => {
     for (let attempt = 0; attempt < 5; attempt++) {
       await request(app).post('/api/auth/cashier/login').send({ cashierId, pin: '9999' });

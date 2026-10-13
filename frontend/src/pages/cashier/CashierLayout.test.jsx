@@ -6,10 +6,11 @@ import { vi } from 'vitest';
 vi.mock('../../store.jsx', () => ({
   useStore: () => ({ now: new Date(2026, 9, 13, 10, 0) }),
 }));
+const logoutSpy = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock('../../auth/AuthContext.jsx', () => ({
   useAuth: () => ({
     user: { name: 'Siti Rahma', role: 'CASHIER' },
-    logout: { mutateAsync: vi.fn(async () => {}) },
+    logout: { mutateAsync: logoutSpy },
   }),
 }));
 vi.mock('../../components/EventBanner.jsx', () => ({ default: () => null }));
@@ -46,6 +47,17 @@ test('"Buat Pesanan" is not active on another cashier page, so it can be clicked
 });
 
 test('logging out returns to the login screen', async () => {
+  renderAt('/kasir');
+  await act(async () => {
+    screen.getByRole('button', { name: /log out/i, hidden: true }).click();
+  });
+  expect(screen.getByText('login')).toBeTruthy();
+});
+
+// A session that expired overnight makes the logout call fail; the tablet must still reach the
+// login screen instead of staying on the POS.
+test('logging out returns to the login screen even when the session is already invalid', async () => {
+  logoutSpy.mockRejectedValueOnce(new Error('Sesi tidak valid atau sudah berakhir'));
   renderAt('/kasir');
   await act(async () => {
     screen.getByRole('button', { name: /log out/i, hidden: true }).click();

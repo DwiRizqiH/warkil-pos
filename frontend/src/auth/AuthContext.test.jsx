@@ -101,3 +101,26 @@ test('logout mengosongkan keranjang sebelum kasir berikutnya memakai tablet', as
   expect(screen.getByTestId('lines').textContent).toBe('0');
   expect(JSON.parse(sessionStorage.getItem('kikil:cart')).lines).toEqual([]);
 });
+
+// A session that expired overnight makes POST /auth/logout answer 401; the tablet is logged out
+// all the same, so the screen must stop acting as if someone is still signed in.
+test('logout tetap mengakhiri sesi saat server membalas 401', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url, options) => {
+      if (String(url).includes('/auth/me')) return ok({ user: { id: 'c1', role: 'CASHIER', name: 'Siti Rahma' }, shiftId: 's1' });
+      if (String(url).includes('/auth/logout') && options?.method === 'POST') return fail('UNAUTHORIZED', 'Sesi tidak valid');
+      return ok({});
+    })
+  );
+
+  mount();
+  await waitFor(() => expect(screen.getByTestId('user').textContent).toBe('Siti Rahma'));
+
+  await act(async () => {
+    screen.getByText('logout').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  await waitFor(() => expect(screen.getByTestId('user').textContent).toBe('kosong'));
+});

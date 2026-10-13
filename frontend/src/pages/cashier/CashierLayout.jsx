@@ -18,8 +18,13 @@ export default function CashierLayout() {
       label: 'Log out',
       icon: 'logout',
       onClick: async () => {
-        await logout.mutateAsync();
-        nav('/kasir/login');
+        try {
+          await logout.mutateAsync();
+        } catch {
+          // The session may already be gone; the cashier leaves this screen either way.
+        } finally {
+          nav('/kasir/login');
+        }
       },
     },
   ];

@@ -86,6 +86,25 @@ describe('login pemilik', () => {
     const res = await request(app).post('/api/auth/owner/login').send({ username: 'owner', password: 'salah' });
     expect(res.status).toBe(401);
   });
+
+  // The owner username is public and there is only one owner, so a hard lock would let anyone on
+  // the network keep the owner out of his own reports for free.
+  it('tidak mengunci pemilik setelah percobaan gagal berulang', async () => {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await request(app).post('/api/auth/owner/login').send({ username: 'owner', password: 'salah' });
+    }
+    const correct = await request(app).post('/api/auth/owner/login').send({ username: 'owner', password: 'rahasia123' });
+    expect(correct.status).toBe(200);
+  }, 30_000);
+
+  it('melambatkan percobaan password berulang pada akun pemilik', async () => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await request(app).post('/api/auth/owner/login').send({ username: 'owner', password: 'salah' });
+    }
+    const started = Date.now();
+    await request(app).post('/api/auth/owner/login').send({ username: 'owner', password: 'salah' });
+    expect(Date.now() - started).toBeGreaterThanOrEqual(1200);
+  }, 30_000);
 });
 
 describe('sesi', () => {

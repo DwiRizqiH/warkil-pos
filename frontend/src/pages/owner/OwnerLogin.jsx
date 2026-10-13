@@ -9,7 +9,9 @@ export default function OwnerLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  if (user) return <Navigate to="/pemilik" replace />;
+  // Only an owner session turns this screen away, so a signed-in cashier cannot bounce back into
+  // the guarded route that sent them here.
+  if (user?.role === 'OWNER') return <Navigate to="/pemilik" replace />;
 
   const submit = async (e) => {
     e.preventDefault();
