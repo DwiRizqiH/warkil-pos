@@ -1,4 +1,6 @@
-export const TEST_DATABASE_URL = 'postgresql://warkil:warkil@localhost:5434/warkil_kasir_test';
+// CI passes its own TEST_DATABASE_URL; the default keeps a local run zero-config.
+export const TEST_DATABASE_URL =
+  process.env.TEST_DATABASE_URL || 'postgresql://warkil:warkil@localhost:5434/warkil_kasir_test';
 
 // Loaded by vitest.config.js before any module import, because src/config/env.js validates at import time.
 export const testEnv = {
