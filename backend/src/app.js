@@ -18,7 +18,8 @@ export function createApp() {
   app.set('trust proxy', TRUST_PROXY);
   app.disable('x-powered-by');
 
-  app.use(helmet());
+  // Menu photos are pasted as remote https URLs, so the default img-src would blank them.
+  app.use(helmet({ contentSecurityPolicy: { directives: { 'img-src': ["'self'", 'data:', 'https:'] } } }));
   app.use(pinoHttp({ logger }));
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());

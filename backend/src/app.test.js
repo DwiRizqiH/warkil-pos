@@ -27,6 +27,14 @@ describe('trust proxy', () => {
   });
 });
 
+describe('csp', () => {
+  // Menu photos are pasted as remote https URLs, and helmet's default img-src blanks them.
+  it('mengizinkan gambar dari origin https luar', async () => {
+    const res = await request(app).get('/api/health');
+    expect(res.headers['content-security-policy']).toContain("img-src 'self' data: https:");
+  });
+});
+
 describe('api', () => {
   it('membalas health check', async () => {
     const res = await request(app).get('/api/health');
