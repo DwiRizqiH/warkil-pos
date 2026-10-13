@@ -16,6 +16,9 @@ Actions → **CI & Deploy** → *Run workflow*, dengan input:
 | `demo` | sama, lalu **semua pesanan, pembayaran, dan shift dihapus** dan diganti riwayat demo 120 hari. |
 | `reset` | sama, lalu **semua pesanan, pembayaran, dan shift dihapus** dan dibiarkan kosong — untuk mulai jualan sungguhan dari nol. |
 
+Deploy juga hanya jalan dari `main`: dispatch dari branch lain berhenti sebelum
+upload, supaya kode yang belum di-merge tidak mendarat di server.
+
 Mode `demo` dan `reset` menuntut input `confirm` diisi `wipe`; tanpa itu workflow
 berhenti sebelum menyentuh server. Keduanya juga menulis peringatan di ringkasan
 run, karena penghapusan itu permanen.
