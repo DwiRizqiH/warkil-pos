@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { vi } from 'vitest';
 import { AuthProvider } from './AuthContext.jsx';
 import { CartProvider } from '../context/CartContext.jsx';
+import OwnerLogin from '../pages/owner/OwnerLogin.jsx';
 import RequireRole from './RequireRole.jsx';
 
 const ok = (body) => new Response(JSON.stringify({ success: true, data: body }), { status: 200 });
@@ -19,7 +20,7 @@ function mount() {
         <AuthProvider>
           <MemoryRouter initialEntries={['/pemilik']}>
             <Routes>
-              <Route path="/pemilik/login" element={<div>halaman login pemilik</div>} />
+              <Route path="/pemilik/login" element={<OwnerLogin />} />
               <Route
                 path="/pemilik"
                 element={
@@ -39,13 +40,14 @@ function mount() {
 test('mengalihkan ke login saat belum masuk', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => fail('UNAUTHORIZED', 'Belum masuk')));
   mount();
-  await waitFor(() => expect(screen.getByText('halaman login pemilik')).toBeTruthy());
+  expect(await screen.findByRole('heading', { name: 'Login Pemilik' })).toBeTruthy();
 });
 
-test('mengalihkan kasir yang membuka halaman pemilik', async () => {
+// The login page only turns away its own role, so the guard and the page cannot bounce forever.
+test('mengalihkan kasir yang membuka halaman pemilik ke halaman login pemilik', async () => {
   asUser({ id: 'c1', role: 'CASHIER', name: 'Siti Rahma' });
   mount();
-  await waitFor(() => expect(screen.getByText('halaman login pemilik')).toBeTruthy());
+  expect(await screen.findByRole('heading', { name: 'Login Pemilik' })).toBeTruthy();
 });
 
 test('menampilkan halaman saat perannya cocok', async () => {
