@@ -7,10 +7,8 @@ import { ok } from '../lib/respond.js';
 import { unauthorized } from '../lib/errors.js';
 import { requireAuth, SESSION_COOKIE } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { loginCashier, loginOwner } from '../services/auth.js';
+import { loginCashier, loginOwner, SESSION_MAX_AGE_MS } from '../services/auth.js';
 import { closeAllOpenShifts } from '../services/shifts.js';
-
-const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 // A 4-digit PIN is 10,000 combinations: per-IP limiting blunts mass guessing, per-account
 // lockout handles a targeted run at one cashier.

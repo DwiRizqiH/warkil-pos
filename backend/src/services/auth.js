@@ -7,7 +7,8 @@ import { ensureOpenShift } from './shifts.js';
 
 const MAX_ATTEMPTS = 5;
 const LOCK_MINUTES = 15;
-const SESSION_HOURS = 12;
+// One lifetime for the token and the cookie, so the two cannot drift apart.
+export const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 // The owner username is public and there is only one owner row, so a hard lock hands anyone on the
 // network a free way to keep the owner out of his own reports. Slow the guesses down instead.
 const OWNER_SLOWDOWN_MS = 300;
@@ -18,7 +19,7 @@ export const verifySecret = (value, hash) => bcrypt.compare(value, hash);
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const sign = (payload) => jwt.sign(payload, env.JWT_SECRET, { expiresIn: `${SESSION_HOURS}h` });
+const sign = (payload) => jwt.sign(payload, env.JWT_SECRET, { expiresIn: SESSION_MAX_AGE_MS / 1000 });
 
 export function verifySession(token) {
   try {

@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import { createApp } from '../app.js';
 import { prisma } from '../lib/prisma.js';
 import { hashSecret } from '../services/auth.js';
+import { closeAllOpenShifts } from '../services/shifts.js';
 import { resetDb } from '../test/db.js';
 import { createLoginLimiter } from './auth.js';
 
@@ -131,6 +133,24 @@ describe('sesi', () => {
     const forged = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4Iiwicm9sZSI6Ik9XTkVSIn0.zzzz';
     const res = await request(app).get('/api/auth/me').set('Cookie', `wk_session=${forged}`);
     expect(res.status).toBe(401);
+  });
+
+  it('menyamakan masa berlaku cookie dengan masa berlaku token', async () => {
+    const res = await request(app).post('/api/auth/cashier/login').send({ cashierId, pin: PIN });
+    const cookie = cookieOf(res);
+    const maxAge = Number(/Max-Age=(\d+)/.exec(cookie)[1]);
+    const { iat, exp } = jwt.decode(/wk_session=([^;]+)/.exec(cookie)[1]);
+    expect(maxAge).toBe(exp - iat);
+  });
+
+  // A shift is bookkeeping for the owner's recap, not a session gate.
+  it('tetap menerima sesi setelah shift ditutup', async () => {
+    const login = await request(app).post('/api/auth/cashier/login').send({ cashierId, pin: PIN });
+    await closeAllOpenShifts(cashierId);
+    const res = await request(app).get('/api/auth/me').set('Cookie', cookieOf(login));
+    expect(res.status).toBe(200);
+    expect(res.body.data.shiftId).toBeTruthy();
+    expect(await prisma.shift.count({ where: { cashierId, endedAt: null } })).toBe(0);
   });
 });
 
