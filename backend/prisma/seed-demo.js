@@ -53,6 +53,16 @@ function pick(rng, weights) {
   return weights.length - 1;
 }
 
+// The relations have no cascade, so the children go first; users and menus are left alone.
+export async function clearOrderHistory(client = prisma) {
+  await client.$transaction([
+    client.orderItem.deleteMany(),
+    client.payment.deleteMany(),
+    client.order.deleteMany(),
+    client.shift.deleteMany(),
+  ]);
+}
+
 export async function generateDemoHistory(days = 120, client = prisma) {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('generateDemoHistory tidak boleh dijalankan di production');
@@ -166,6 +176,10 @@ export async function generateDemoHistory(days = 120, client = prisma) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const days = Number(process.env.SEED_DEMO_DAYS ?? 120);
+  if (process.env.SEED_DEMO_RESET === '1') {
+    console.log('menghapus pesanan dan shift yang ada');
+    await clearOrderHistory();
+  }
   console.log(`riwayat demo dibuat: ${await generateDemoHistory(days)} pesanan`);
   await prisma.$disconnect();
 }

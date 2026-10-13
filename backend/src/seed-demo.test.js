@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from './lib/prisma.js';
 import { seedBase } from '../prisma/seed.js';
-import { generateDemoHistory } from '../prisma/seed-demo.js';
+import { clearOrderHistory, generateDemoHistory } from '../prisma/seed-demo.js';
 import { resetDb } from './test/db.js';
 
 beforeEach(async () => {
@@ -45,5 +45,28 @@ describe('generateDemoHistory', () => {
     await generateDemoHistory(10);
     const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
     expect(await prisma.order.count({ where: { businessDate: { gte: today } } })).toBe(0);
+  }, 120000);
+});
+
+describe('clearOrderHistory', () => {
+  it('mengosongkan pesanan dan shift tanpa menyentuh pengguna dan menu', async () => {
+    await generateDemoHistory(5);
+    const users = await prisma.user.count();
+    const menus = await prisma.menu.count();
+
+    await clearOrderHistory();
+
+    expect(await prisma.order.count()).toBe(0);
+    expect(await prisma.orderItem.count()).toBe(0);
+    expect(await prisma.payment.count()).toBe(0);
+    expect(await prisma.shift.count()).toBe(0);
+    expect(await prisma.user.count()).toBe(users);
+    expect(await prisma.menu.count()).toBe(menus);
+  }, 120000);
+
+  it('mengizinkan riwayat demo dibuat ulang setelah dibersihkan', async () => {
+    const first = await generateDemoHistory(5);
+    await clearOrderHistory();
+    expect(await generateDemoHistory(5)).toBe(first);
   }, 120000);
 });
