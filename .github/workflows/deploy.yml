@@ -1,10 +1,8 @@
 name: CI & Deploy
 
 on:
-  push:
-    branches: [main]
+  # Push tidak menjalankan apa pun; deploy (dan tesnya) dipilih dari tab Actions.
   pull_request:
-  # Deploy sengaja manual: push ke main hanya menguji, deploy dipilih dari tab Actions.
   workflow_dispatch:
     inputs:
       mode:
