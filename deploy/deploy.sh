@@ -4,6 +4,21 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-/home/dwi/warkil-kasir}"
 ENV_FILE="${ENV_FILE:-$APP_DIR/shared/backend.env}"
+MODE="${MODE:-production}"
+
+case "$MODE" in
+  production) ;;
+  demo | reset)
+    if [ "${WIPE_CONFIRMED:-}" != wipe ]; then
+      echo "mode $MODE menghapus pesanan di server — jalankan dengan WIPE_CONFIRMED=wipe" >&2
+      exit 1
+    fi
+    ;;
+  *)
+    echo "MODE tidak dikenal: $MODE (production, demo, atau reset)" >&2
+    exit 1
+    ;;
+esac
 
 # The upload owns $APP_DIR/backend, so the secrets live beside it; backend/.env symlinks here
 # and the app and Prisma CLI load it themselves, so this script checks it without sourcing it.
@@ -21,6 +36,13 @@ npm ci --omit=dev
 npx prisma generate
 npx prisma migrate deploy
 npm run seed
+
+# seed:demo refuses to run twice on the same database, so the wipe is what makes demo repeatable.
+if [ "$MODE" = demo ]; then
+  NODE_ENV=development SEED_DEMO_RESET=1 npm run seed:demo
+elif [ "$MODE" = reset ]; then
+  npm run seed:reset
+fi
 
 # startOrReload keeps the old definition when the script path changed, which is how the mock
 # server kept running in production; starting from the config always applies it.
@@ -41,5 +63,5 @@ if [ "$healthy" != true ]; then
   exit 1
 fi
 
-echo "deploy selesai: $(date -Is)"
+echo "deploy selesai (MODE=$MODE): $(date -Is)"
 pm2 describe warkil-kasir | grep -E 'script path|status|uptime|restarts' || true

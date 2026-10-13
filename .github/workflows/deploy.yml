@@ -1,9 +1,21 @@
-name: Deploy ke VPS
+name: CI & Deploy
 
 on:
   push:
     branches: [main]
+  pull_request:
+  # Deploy sengaja manual: push ke main hanya menguji, deploy dipilih dari tab Actions.
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Data di server setelah deploy'
+        type: choice
+        options: [production, demo, reset]
+        default: production
+      confirm:
+        description: "Isi 'wipe' kalau memilih demo atau reset — pesanan di server akan dihapus"
+        type: string
+        default: ''
 
 concurrency:
   group: deploy-production
@@ -51,7 +63,27 @@ jobs:
           npx prisma generate
           npm test
 
+      - name: Periksa mode dan konfirmasi
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          MODE: ${{ inputs.mode }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          case "$MODE" in
+            production)
+              echo "::notice::Mode production: menu, kasir, dan pengaturan di-upsert, data penjualan tidak dihapus."
+              ;;
+            demo | reset)
+              if [ "$CONFIRM" != wipe ]; then
+                echo "::error::Mode $MODE menghapus semua pesanan, pembayaran, dan shift di server. Isi input confirm dengan 'wipe' kalau memang itu yang diinginkan."
+                exit 1
+              fi
+              echo "::warning::Mode $MODE: semua pesanan, pembayaran, dan shift di server DIHAPUS dan tidak bisa dikembalikan. Jangan pilih mode ini di server yang sudah dipakai jualan sungguhan."
+              ;;
+          esac
+
       - name: Upload source + build ke server
+        if: github.event_name == 'workflow_dispatch'
         uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.SSH_HOST || '155.94.164.159' }}
@@ -61,10 +93,15 @@ jobs:
           target: /home/dwi/warkil-kasir
           overwrite: true
 
-      - name: Install backend deps & reload PM2
+      - name: Install backend deps, migrate, restart PM2
+        if: github.event_name == 'workflow_dispatch'
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
+        env:
+          MODE: ${{ inputs.mode }}
+          WIPE_CONFIRMED: ${{ (inputs.mode == 'demo' || inputs.mode == 'reset') && 'wipe' || '' }}
         with:
           host: ${{ secrets.SSH_HOST || '155.94.164.159' }}
           username: ${{ secrets.SSH_USER || 'dwi' }}
           password: ${{ secrets.SSH_PASSWORD }}
+          envs: MODE,WIPE_CONFIRMED
           script: bash /home/dwi/warkil-kasir/deploy/deploy.sh
