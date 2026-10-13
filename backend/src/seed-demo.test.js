@@ -1,13 +1,25 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from './lib/prisma.js';
 import { seedBase } from '../prisma/seed.js';
-import { clearOrderHistory, generateDemoHistory } from '../prisma/seed-demo.js';
+import { clearOrderHistory, generateDemoHistory, runDemoSeed } from '../prisma/seed-demo.js';
 import { resetDb } from './test/db.js';
 
 beforeEach(async () => {
   await resetDb();
   await seedBase();
 });
+
+async function withEnv(name, value, run) {
+  const previous = process.env[name];
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+  try {
+    return await run();
+  } finally {
+    if (previous === undefined) delete process.env[name];
+    else process.env[name] = previous;
+  }
+}
 
 describe('generateDemoHistory', () => {
   it('menolak jalan di production', async () => {
@@ -54,7 +66,7 @@ describe('clearOrderHistory', () => {
     const users = await prisma.user.count();
     const menus = await prisma.menu.count();
 
-    await clearOrderHistory();
+    await withEnv('WIPE_CONFIRMED', 'wipe', () => clearOrderHistory());
 
     expect(await prisma.order.count()).toBe(0);
     expect(await prisma.orderItem.count()).toBe(0);
@@ -64,9 +76,34 @@ describe('clearOrderHistory', () => {
     expect(await prisma.menu.count()).toBe(menus);
   }, 120000);
 
+  it('menolak menghapus tanpa konfirmasi WIPE_CONFIRMED', async () => {
+    await generateDemoHistory(3);
+
+    await withEnv('WIPE_CONFIRMED', undefined, async () => {
+      await expect(clearOrderHistory()).rejects.toThrow(/WIPE_CONFIRMED/);
+    });
+
+    expect(await prisma.order.count()).toBeGreaterThan(0);
+  }, 120000);
+
   it('mengizinkan riwayat demo dibuat ulang setelah dibersihkan', async () => {
     const first = await generateDemoHistory(5);
-    await clearOrderHistory();
+    await withEnv('WIPE_CONFIRMED', 'wipe', () => clearOrderHistory());
     expect(await generateDemoHistory(5)).toBe(first);
+  }, 120000);
+});
+
+describe('runDemoSeed', () => {
+  it('menolak reset di production sebelum menghapus apa pun', async () => {
+    await generateDemoHistory(3);
+    const orders = await prisma.order.count();
+
+    await withEnv('NODE_ENV', 'production', async () => {
+      await withEnv('WIPE_CONFIRMED', 'wipe', async () => {
+        await expect(runDemoSeed({ days: 3, reset: true })).rejects.toThrow(/production/i);
+      });
+    });
+
+    expect(await prisma.order.count()).toBe(orders);
   }, 120000);
 });
