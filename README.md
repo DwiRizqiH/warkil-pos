@@ -1,9 +1,8 @@
 # Warkil-Kasir
 
-Aplikasi kasir (POS) Warung Kikil Abang. Dokumen ini juga menjadi template pencatatan QA. Status di bawah sengaja dimulai sebagai **Belum diuji**; ubah setelah pengujian benar-benar dilakukan.
+Aplikasi kasir (POS) Warung Kikil Abang. Dokumen ini juga menjadi catatan QA. Perbarui status berdasarkan hasil pengujian atau peninjauan yang benar-benar dilakukan.
 
 ## Catatan QA
-
 
 ### Status
 
@@ -11,27 +10,29 @@ Aplikasi kasir (POS) Warung Kikil Abang. Dokumen ini juga menjadi template penca
 - **Lulus** — hasil aktual sesuai hasil yang diharapkan.
 - **Gagal** — hasil aktual berbeda; catat sebagai temuan.
 - **Terblokir** — pengujian tidak bisa dilanjutkan; tuliskan alasannya.
+- **Perlu perbaikan** — ada kebutuhan atau masalah yang perlu ditangani.
 - **Perlu regresi** — sudah diperbaiki dan perlu diuji ulang.
 
 ### Checklist fitur
 
-| Area                        | Skenario yang diuji                                                                        | Hasil yang diharapkan                                                                         | Status      | Catatan/ID temuan |
-| --------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- | ----------- | ----------------- |
-| Akses umum                  | Buka halaman awal dan navigasi ke halaman Pemilik/Kasir                                    | Halaman terbuka dan navigasi menuju tujuan yang benar                                         | Belum diuji |                   |
-| Navigasi kembali            | Buka halaman dari menu, lalu gunakan tombol panah kembali                                  | Kembali ke halaman sebelumnya tanpa harus membuka menu garis tiga                             | Belum diuji |                   |
-| Login dan akses             | Login Pemilik/Kasir, kredensial salah, logout, akses halaman dengan role yang tidak sesuai | Akses sesuai role; kredensial salah ditolak; logout mengakhiri sesi                           | Belum diuji |                   |
-| Percobaan login Owner       | Masukkan password Owner yang salah 3 kali, coba login saat jeda, lalu coba lagi setelah 1 menit | Login ditahan selama 1 menit dengan pesan yang jelas; akun tidak terkunci permanen dan percobaan direset setelah login berhasil | Belum diuji |                   |
-| Dashboard Pemilik           | Buka dashboard dan periksa ringkasan yang ditampilkan                                      | Ringkasan tampil dan konsisten dengan data uji                                                | Belum diuji |                   |
-| Kalender                    | Pindah bulan/tanggal; tandai event atau libur; hapus tanda; aktif/nonaktifkan libur Minggu | Tanggal dan tanda tampil sesuai tindakan; tanggal mendatang tidak menampilkan rekap penjualan | Belum diuji |                   |
-| Menu dan kategori           | Tambah, ubah, hapus menu; cari/filter; tambah dan ubah kategori                            | Data dan daftar berubah sesuai tindakan; kategori berisi menu tidak dapat dihapus             | Belum diuji |                   |
-| Menu paket                  | Buat/edit paket, atur isi dan jumlah item, periksa diskon dan harga                        | Harga normal dan harga paket dihitung dengan benar; input tidak valid tidak tersimpan         | Belum diuji |                   |
-| Foto menu halaman Kasir     | Periksa foto menu yang ditampilkan dan kecocokannya dengan item                           | Foto asli terlihat jelas dan sesuai dengan menu yang dipesan                                  | Belum diuji |                   |
-| POS/Kasir                   | Cari/filter menu; tambah item; ubah jumlah; hapus item; kosongkan nota; tambah catatan     | Isi nota, jumlah item, dan subtotal berubah sesuai tindakan                                   | Belum diuji |                   |
-| Tipe pesanan dan pembayaran | Pilih makan di tempat/takeaway; lanjutkan pembayaran; batalkan atau selesaikan alur        | Tipe pesanan dan total benar; hasil transaksi/nota sesuai alur yang tersedia                  | Belum diuji |                   |
-| Pesanan makan di tempat     | Buka daftar pesanan dan uji tindakan yang tersedia                                         | Daftar dan status pesanan sesuai transaksi uji                                                | Belum diuji |                   |
-| Penjualan                   | Periksa halaman laporan Penjualan Pemilik dan Kasir dengan rentang/data uji yang tersedia  | Nilai dan filter laporan sesuai transaksi uji                                                 | Belum diuji |                   |
-| Performa kasir              | Periksa laporan/peringkat kasir dengan data uji                                            | Data kasir dan metrik sesuai transaksi uji                                                    | Belum diuji |                   |
-| Validasi dan ketahanan      | Uji input kosong, format salah, nilai batas, pemuatan/error API, serta refresh halaman     | Pesan kesalahan jelas; aplikasi tidak menyimpan data tidak valid atau masuk ke kondisi rusak  | Belum diuji |                   |
+| Area                        | Skenario yang diuji                                                                             | Hasil yang diharapkan                                                                                                              | Status         | Catatan/ID temuan                                  |
+| --------------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------- |
+| Akses umum                  | Buka halaman awal dan navigasi ke halaman Pemilik/Kasir                                         | Halaman terbuka dan navigasi menuju tujuan yang benar                                                                              | Lulus          |                                                    |
+| Navigasi kembali            | Buka halaman dari menu, lalu gunakan tombol panah kembali                                       | Kembali ke halaman sebelumnya tanpa harus membuka menu garis tiga                                                                  | Perlu regresi  |                                                    |
+| Login dan akses             | Login Pemilik/Kasir, kredensial salah, logout, akses halaman dengan role yang tidak sesuai      | Akses sesuai role; kredensial salah ditolak; logout mengakhiri sesi                                                                 | Lulus          |                                                    |
+| Percobaan login Owner       | Masukkan password Owner yang salah 3 kali, coba login saat jeda, lalu coba lagi setelah 1 menit | Login ditahan selama 1 menit dengan pesan yang jelas; akun tidak terkunci permanen dan percobaan direset setelah login berhasil    | Perlu regresi  |                                                    |
+| Dashboard Pemilik           | Buka dashboard dan periksa ringkasan yang ditampilkan                                           | Ringkasan tampil dan konsisten dengan data uji                                                                                     | Perlu perbaikan | Tambahkan popup/notifikasi dan animasi ringan.    |
+| Kalender                    | Pindah bulan/tanggal; tandai event atau libur; hapus tanda; aktif/nonaktifkan libur Minggu      | Tanggal dan tanda tampil sesuai tindakan; tanggal mendatang tidak menampilkan rekap penjualan                                      | Lulus          |                                                    |
+| Menu dan kategori           | Tambah, ubah, hapus menu; cari/filter; tambah dan ubah kategori                                 | Data dan daftar berubah sesuai tindakan; kategori berisi menu tidak dapat dihapus                                                  | Perlu perbaikan | Ganti emoji menu dengan input gambar yang fleksibel. |
+| Menu paket                  | Buat/edit paket, atur isi dan jumlah item, periksa diskon dan harga                             | Harga normal dan harga paket dihitung dengan benar; input tidak valid tidak tersimpan                                              | Belum diuji    |                                                    |
+| Foto menu halaman Kasir     | Periksa foto menu yang ditampilkan dan kecocokannya dengan item                                 | Foto asli terlihat jelas dan sesuai dengan menu yang dipesan                                                                       | Belum diuji    |                                                    |
+| POS/Kasir                   | Cari/filter menu; tambah item; ubah jumlah; hapus item; kosongkan nota; tambah catatan          | Isi nota, jumlah item, dan subtotal berubah sesuai tindakan                                                                        | Lulus          |                                                    |
+| Popup dan animasi           | Periksa notifikasi/popup saat aksi berhasil atau gagal, serta transisi antarhalaman             | Animasi ringan dan popup jelas; tidak mengganggu transaksi atau menutupi informasi penting                                         | Belum diuji    |                                                    |
+| Tipe pesanan dan pembayaran | Pilih makan di tempat/takeaway; lanjutkan pembayaran; batalkan atau selesaikan alur             | Tipe pesanan dan total benar; hasil transaksi/nota sesuai alur yang tersedia                                                       | Belum diuji    |                                                    |
+| Pesanan makan di tempat     | Buka daftar pesanan dan uji tindakan yang tersedia                                              | Daftar dan status pesanan sesuai transaksi uji                                                                                     | Belum diuji    |                                                    |
+| Penjualan                   | Periksa halaman laporan Penjualan Pemilik dan Kasir dengan rentang/data uji yang tersedia       | Nilai dan filter laporan sesuai transaksi uji                                                                                      | Belum diuji    |                                                    |
+| Performa kasir              | Periksa laporan/peringkat kasir dengan data uji                                                 | Data kasir dan metrik sesuai transaksi uji                                                                                         | Belum diuji    |                                                    |
+| Validasi dan ketahanan      | Uji input kosong, format salah, nilai batas, pemuatan/error API, serta refresh halaman          | Pesan kesalahan jelas; aplikasi tidak menyimpan data tidak valid atau masuk ke kondisi rusak                                       | Belum diuji    |                                                    |
 
 Hapus atau sesuaikan skenario yang memang tidak tersedia pada environment yang diuji, lalu tulis alasannya di kolom catatan.
 
@@ -73,20 +74,18 @@ Salin bagian ini untuk setiap bug atau usulan revisi. Bedakan bug (perilaku tida
 
 Jangan masukkan PIN, password, token, cookie, atau data pribadi ke laporan maupun bukti.
 
-## Menjalankan automated test
+## Menjalankan test otomatis
 
-Jalankan test frontend:
+Jalankan test frontend dari folder `frontend`:
 
 ```bash
-cd frontend
-npm run dev
+npm test
 ```
 
-Jalankan test backend:
+Jalankan test backend dari folder `backend`:
 
 ```bash
-cd backend
-npm run dev
+npm test
 ```
 
 Test backend menggunakan database uji di port **5434** dan dapat mengosongkan tabel database tersebut. Pastikan konfigurasi mengarah hanya ke database uji, bukan database kerja atau production.
