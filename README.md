@@ -4,6 +4,12 @@ Aplikasi kasir (POS) Warung Kikil Abang. Dokumen ini juga menjadi catatan QA.
 Perbarui status berdasarkan hasil pengujian atau peninjauan yang benar-benar
 dilakukan.
 
+## TODO
+- Chart.js frontend
+- Implement Midtrans Payment
+- Implement Image Upload
+- Implement mark batch done in cashier status order
+
 ## Catatan QA
 
 ### Status
