@@ -1,6 +1,8 @@
 # Warkil-Kasir
 
-Aplikasi kasir (POS) Warung Kikil Abang. Dokumen ini juga menjadi catatan QA. Perbarui status berdasarkan hasil pengujian atau peninjauan yang benar-benar dilakukan.
+Aplikasi kasir (POS) Warung Kikil Abang. Dokumen ini juga menjadi catatan QA.
+Perbarui status berdasarkan hasil pengujian atau peninjauan yang benar-benar
+dilakukan.
 
 ## Catatan QA
 
@@ -38,7 +40,9 @@ Hapus atau sesuaikan skenario yang memang tidak tersedia pada environment yang d
 
 ### Kebutuhan foto menu halaman Kasir
 
-Gunakan foto asli untuk membantu kasir mengenali menu. Minta mitra mengirim foto yang jelas, pencahayaannya baik, dan benar-benar sesuai dengan menu. Usahakan gaya foto konsisten dan pastikan foto boleh digunakan di aplikasi.
+Gunakan foto asli untuk membantu kasir mengenali menu. Minta mitra mengirim foto
+yang jelas, pencahayaannya baik, dan benar-benar sesuai dengan menu. Usahakan
+gaya foto konsisten dan pastikan foto boleh digunakan di aplikasi.
 
 Contoh permintaan kepada mitra:
 
@@ -54,7 +58,8 @@ Salin baris ini untuk skenario tambahan:
 
 ### Format laporan temuan/revisi
 
-Salin bagian ini untuk setiap bug atau usulan revisi. Bedakan bug (perilaku tidak sesuai kebutuhan) dari usulan perbaikan UX.
+Salin bagian ini untuk setiap bug atau usulan revisi. Bedakan bug (perilaku
+tidak sesuai kebutuhan) dari usulan perbaikan UX.
 
 #### [BUG/UX]-[nomor]: [judul singkat]
 
@@ -74,30 +79,6 @@ Salin bagian ini untuk setiap bug atau usulan revisi. Bedakan bug (perilaku tida
 
 Jangan masukkan PIN, password, token, cookie, atau data pribadi ke laporan maupun bukti.
 
-## Menjalankan test otomatis
-
-Jalankan test frontend dari folder `frontend`:
-
-```bash
-npm test
-```
-
-Jalankan test backend dari folder `backend`:
-
-```bash
-npm test
-```
-
-Test backend menggunakan database uji di port **5434** dan dapat mengosongkan tabel database tersebut. Pastikan konfigurasi mengarah hanya ke database uji, bukan database kerja atau production.
-
-### Ringkasan hasil test
-
-Isi setelah menjalankan test; jangan menandai lulus hanya karena test berhasil dimulai.
-
-| Bagian   | Perintah                  | Hasil            | Catatan                       |
-| -------- | ------------------------- | ---------------- | ----------------------------- |
-| Frontend | `cd frontend && npm test` | Belum dijalankan |                               |
-| Backend  | `cd backend && npm test`  | Belum dijalankan | Pastikan memakai database uji |
 
 ## Kriteria selesai QA
 
