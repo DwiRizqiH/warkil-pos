@@ -5,6 +5,7 @@ Perbarui status berdasarkan hasil pengujian atau peninjauan yang benar-benar
 dilakukan.
 
 ## TODO
+
 - Chart.js frontend
 - Implement Midtrans Payment
 - Implement Image Upload
@@ -40,7 +41,7 @@ dilakukan.
 | Pesanan makan di tempat     | Buka daftar pesanan dan uji tindakan yang tersedia                                              | Daftar dan status pesanan sesuai transaksi uji                                                                                  | Lulus           |                                                                    |
 | Penjualan                   | Periksa halaman laporan Penjualan Pemilik dan Kasir dengan rentang/data uji yang tersedia       | Nilai dan filter laporan sesuai transaksi uji                                                                                   | Perlu regresi   | Tambahin filter filter laporan yang berdasarakan kategori tertentu |
 | Performa kasir              | Periksa laporan/peringkat kasir dengan data uji                                                 | Data kasir dan metrik sesuai transaksi uji                                                                                      | Lulus           |                                                                    |
-| Validasi dan ketahanan      | Uji input kosong, format salah, nilai batas, pemuatan/error API, serta refresh halaman          | Pesan kesalahan jelas; aplikasi tidak menyimpan data tidak valid atau masuk ke kondisi rusak                                    | Belum diuji     |                                                                    |
+| Validasi dan ketahanan      | Uji input kosong, format salah, nilai batas, pemuatan/error API, serta refresh halaman          | Pesan kesalahan jelas; aplikasi tidak menyimpan data tidak valid atau masuk ke kondisi rusak                                    | Belum diuji     |                                                                     |
 
 Hapus atau sesuaikan skenario yang memang tidak tersedia pada environment yang diuji, lalu tulis alasannya di kolom catatan.
 
@@ -84,7 +85,6 @@ tidak sesuai kebutuhan) dari usulan perbaikan UX.
 - **Hasil uji ulang:** [tanggal, versi, hasil; isi setelah perbaikan diuji]
 
 Jangan masukkan PIN, password, token, cookie, atau data pribadi ke laporan maupun bukti.
-
 
 ## Kriteria selesai QA
 
