@@ -33,6 +33,9 @@ Pada semua deploy, workflow:
    `npm ci --omit=dev`, `prisma migrate deploy`, `npm run seed`, restart PM2,
    lalu cek `/api/health`
 
+GitHub Actions menggunakan cache npm berdasarkan lockfile frontend dan backend,
+sehingga paket tidak perlu diunduh ulang setiap kali workflow berjalan.
+
 Push ke `main` menggunakan mode `production`: menu, kasir, dan pengaturan
 di-upsert tanpa menghapus data penjualan. Hanya manual mode `demo` dan `reset`
 yang menghapus data penjualan; keduanya meminta input `confirm` berisi `wipe`.
