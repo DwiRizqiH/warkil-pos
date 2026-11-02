@@ -115,7 +115,6 @@ s { color: var(--mute); }
 .input.pin { letter-spacing: 0.5em; text-align: center; font-size: 22px; }
 textarea.input { resize: vertical; }
 .form { display: flex; flex-direction: column; gap: 14px; }
-.form-error { color: var(--red); font-size: 13px; font-weight: 600; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } }
 

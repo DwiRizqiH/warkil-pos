@@ -6,7 +6,6 @@ import OwnerDashboard from './pages/owner/OwnerDashboard.jsx';
 import OwnerLogin from './pages/owner/OwnerLogin.jsx';
 import OwnerCalendar from './pages/owner/OwnerCalendar.jsx';
 import OwnerMenu from './pages/owner/OwnerMenu.jsx';
-import OwnerCashiers from './pages/owner/OwnerCashiers.jsx';
 import OwnerSales from './pages/owner/OwnerSales.jsx';
 import OwnerPerformance from './pages/owner/OwnerPerformance.jsx';
 import CashierLogin from './pages/cashier/CashierLogin.jsx';
@@ -32,7 +31,6 @@ export default function App() {
         <Route index element={<OwnerDashboard />} />
         <Route path="kalender" element={<OwnerCalendar />} />
         <Route path="menu" element={<OwnerMenu />} />
-        <Route path="kasir" element={<OwnerCashiers />} />
         <Route path="penjualan" element={<OwnerSales />} />
         <Route path="performa" element={<OwnerPerformance />} />
       </Route>

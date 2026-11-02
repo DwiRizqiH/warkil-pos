@@ -1,16 +1,15 @@
 name: CI & Deploy
 
 on:
-  push:
-    branches: [main]
+  # Push tidak menjalankan apa pun; deploy (dan tesnya) dipilih dari tab Actions.
   pull_request:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Reset data penjualan, lalu isi ulang dengan demo atau biarkan kosong'
+        description: 'Data di server setelah deploy'
         type: choice
-        options: [demo, reset]
-        required: true
+        options: [production, demo, reset]
+        default: production
       confirm:
         description: "Isi 'wipe' kalau memilih demo atau reset — pesanan di server akan dihapus"
         type: string
@@ -45,9 +44,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: |
-            frontend/package-lock.json
-            backend/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Build frontend
         working-directory: frontend
@@ -65,9 +62,9 @@ jobs:
           npm test
 
       - name: Periksa mode dan konfirmasi
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch'
         env:
-          MODE: ${{ github.event_name == 'push' && 'production' || inputs.mode }}
+          MODE: ${{ inputs.mode }}
           CONFIRM: ${{ inputs.confirm }}
         run: |
           if [ "$GITHUB_REF" != refs/heads/main ]; then
@@ -88,7 +85,7 @@ jobs:
           esac
 
       - name: Upload source + build ke server
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch'
         uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.SSH_HOST || '155.94.164.159' }}
@@ -99,10 +96,10 @@ jobs:
           overwrite: true
 
       - name: Install backend deps, migrate, restart PM2
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch'
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
         env:
-          MODE: ${{ github.event_name == 'push' && 'production' || inputs.mode }}
+          MODE: ${{ inputs.mode }}
           WIPE_CONFIRMED: ${{ (inputs.mode == 'demo' || inputs.mode == 'reset') && 'wipe' || '' }}
         with:
           host: ${{ secrets.SSH_HOST || '155.94.164.159' }}

@@ -14,7 +14,6 @@ function mount(role, path) {
     vi.fn(async (url) => {
       if (String(url).includes('/auth/me')) return ok({ user: { id: 'u1', role, name: 'Pemilik Warung' }, shiftId: null });
       if (String(url).includes('/auth/cashiers')) return ok([{ id: 'c1', name: 'Siti Rahma' }]);
-      if (String(url).endsWith('/cashiers')) return ok([]);
       return ok({});
     })
   );
@@ -44,10 +43,4 @@ test('pemilik yang membuka halaman kasir berhenti di layar login kasir', async (
 test('kasir yang membuka halaman pemilik berhenti di layar login pemilik', async () => {
   mount('CASHIER', '/pemilik');
   expect(await screen.findByRole('heading', { name: 'Login Pemilik' })).toBeTruthy();
-});
-
-test('pemilik dapat membuka halaman pengelolaan kasir', async () => {
-  mount('OWNER', '/pemilik/kasir');
-  expect(await screen.findByRole('heading', { name: 'Kelola Kasir' })).toBeTruthy();
-  expect(screen.getByRole('link', { name: /kelola kasir/i, hidden: true })).toBeTruthy();
 });

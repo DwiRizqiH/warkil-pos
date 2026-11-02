@@ -55,10 +55,6 @@ function pick(rng, weights) {
 
 // The relations have no cascade, so the children go first; users and menus are left alone.
 export async function clearOrderHistory(client = prisma) {
-  if (process.env.WIPE_CONFIRMED !== 'wipe') {
-    throw new Error('WIPE_CONFIRMED=wipe diperlukan untuk menghapus riwayat pesanan');
-  }
-
   await client.$transaction([
     client.orderItem.deleteMany(),
     client.payment.deleteMany(),
@@ -178,20 +174,12 @@ export async function generateDemoHistory(days = 120, client = prisma) {
   return orderCount;
 }
 
-export async function runDemoSeed({ days = 120, reset = false, client = prisma } = {}) {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('seed:demo tidak boleh dijalankan di production');
-  }
-  if (reset) await clearOrderHistory(client);
-  return generateDemoHistory(days, client);
-}
-
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const days = Number(process.env.SEED_DEMO_DAYS ?? 120);
-  const reset = process.env.SEED_DEMO_RESET === '1';
-  if (reset) {
+  if (process.env.SEED_DEMO_RESET === '1') {
     console.log('menghapus pesanan dan shift yang ada');
+    await clearOrderHistory();
   }
-  console.log(`riwayat demo dibuat: ${await runDemoSeed({ days, reset })} pesanan`);
+  console.log(`riwayat demo dibuat: ${await generateDemoHistory(days)} pesanan`);
   await prisma.$disconnect();
 }

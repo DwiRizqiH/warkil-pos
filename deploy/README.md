@@ -6,39 +6,31 @@ Nginx `testwarkil.remcp.com` (port 80) mem-proxy ke port tersebut.
 
 ## Deploy
 
-`.github/workflows/deploy.yml` otomatis menjalankan build, tes, dan deploy mode
-`production` setiap ada push ke `main`. Pull request hanya menjalankan build dan
-tes, tanpa menyentuh server. Deploy mode `demo` atau `reset` dijalankan manual
-dari GitHub → Actions → **CI & Deploy** → *Run workflow*, dengan input:
+`.github/workflows/deploy.yml` tidak jalan sendiri: push ke `main` tidak
+menjalankan apa pun, pull request hanya build + tes. Deploy (beserta tesnya)
+dipilih manual dari GitHub → Actions → **CI & Deploy** → *Run workflow*, dengan
+input:
 
 | Mode | Yang terjadi di server |
 | --- | --- |
+| `production` (default) | upload, `npm ci --omit=dev`, `prisma migrate deploy`, `npm run seed`. Data penjualan tidak disentuh. |
 | `demo` | sama, lalu **semua pesanan, pembayaran, dan shift dihapus** dan diganti riwayat demo 120 hari. |
 | `reset` | sama, lalu **semua pesanan, pembayaran, dan shift dihapus** dan dibiarkan kosong — untuk mulai jualan sungguhan dari nol. |
 
-Manual deploy hanya jalan dari `main`: dispatch dari branch lain berhenti
-sebelum upload, supaya kode yang belum di-merge tidak mendarat di server. Push
-ke branch selain `main` tidak men-deploy.
+Deploy juga hanya jalan dari `main`: dispatch dari branch lain berhenti sebelum
+upload, supaya kode yang belum di-merge tidak mendarat di server.
 
 Mode `demo` dan `reset` menuntut input `confirm` diisi `wipe`; tanpa itu workflow
 berhenti sebelum menyentuh server. Keduanya juga menulis peringatan di ringkasan
 run, karena penghapusan itu permanen.
 
-Pada semua deploy, workflow:
+Isi langkah di workflow:
 
 1. runner checkout repo, `npm ci` + `npm run build` di `frontend/`
-2. memasang dependency dan menjalankan tes backend
-3. meng-upload `frontend/dist`, `backend/`, dan `deploy/` ke server
-4. menjalankan `deploy/deploy.sh` di server: periksa mode dan env,
+2. `frontend/dist`, `backend/`, dan `deploy/` di-upload ke server
+3. `deploy/deploy.sh` dijalankan di server: periksa mode dan env,
    `npm ci --omit=dev`, `prisma migrate deploy`, `npm run seed`, restart PM2,
    lalu cek `/api/health`
-
-GitHub Actions menggunakan cache npm berdasarkan lockfile frontend dan backend,
-sehingga paket tidak perlu diunduh ulang setiap kali workflow berjalan.
-
-Push ke `main` menggunakan mode `production`: menu, kasir, dan pengaturan
-di-upsert tanpa menghapus data penjualan. Hanya manual mode `demo` dan `reset`
-yang menghapus data penjualan; keduanya meminta input `confirm` berisi `wipe`.
 
 **Satu langkah manual yang belum bisa diotomatiskan:** tambahkan repository secret
 `SSH_PASSWORD` di Settings → Secrets and variables → Actions. Nilainya password SSH
