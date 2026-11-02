@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import CalendarGrid from '../../components/CalendarGrid.jsx';
 import ShiftCard, { TopCashierCard } from '../../components/ShiftCard.jsx';
@@ -12,6 +12,20 @@ export default function OwnerPerformance() {
   const today = ymd(now);
   const selected = params.get('date') || today;
   const focus = params.get('shift');
+  const detailRefs = useRef(new Map());
+
+useEffect(() => {
+  if (!focus) return;
+
+  const target = detailRefs.current.get(focus);
+
+  if (target) {
+    target.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }
+}, [focus, selected]);
   const [cursor, setCursor] = useState(() => {
     const d = parseYmd(selected);
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -68,8 +82,8 @@ export default function OwnerPerformance() {
         </div>
       </div>
 
-      {shifts.map((s) => (
-        <section key={s.idx} className={'card card-pad stack' + (focus === String(s.idx) ? ' ring' : '')}>
+{shifts.map((s) => (
+  <section key={s.idx} ref={(el) => { if (el) { detailRefs.current.set(String(s.idx), el); } else { detailRefs.current.delete(String(s.idx)); }}}  style={{ scrollMarginTop: '76px' }} className={'card card-pad stack' + (focus === String(s.idx) ? ' ring' : '')}>
           <div className="spread wrap">
             <h3>Detail penjualan · {s.cashier} ({s.label})</h3>
             <span className="muted">{s.count} transaksi · <b>{rupiah(s.total)}</b></span>

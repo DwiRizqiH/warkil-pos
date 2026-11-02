@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import MenuCard from '../../components/MenuCard.jsx';
 import Modal from '../../components/Modal.jsx';
 import Icon from '../../components/Icon.jsx';
@@ -8,6 +8,7 @@ import { menusForCategory } from '../../selectors.js';
 import { rupiah } from '../../utils.js';
 
 function MenuForm({ initial, defaultCat, menus, categories, onSave, onClose }) {
+  const fileInputRef = useRef(null);
   const [f, setF] = useState(() =>
     initial
       ? {
@@ -132,10 +133,87 @@ function MenuForm({ initial, defaultCat, menus, categories, onSave, onClose }) {
           <div>
             <label className="label">Emoji (sementara pengganti foto)</label>
             <input className="input" value={f.emoji} onChange={(e) => set('emoji', e.target.value)} />
+            <p className="muted sm">Gunakan emoji jika belum memiliki foto menu.</p>
           </div>
           <div>
-            <label className="label">URL foto (opsional)</label>
-            <input className="input" value={f.image} onChange={(e) => set('image', e.target.value)} placeholder="https://…" />
+            <label className="label">Upload foto (opsional)</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                if (!file.type.startsWith('image/')) {
+                  window.alert('Pilih file gambar yang valid.');
+                  e.target.value = '';
+                  return;
+                }
+
+                if (file.size > 5 * 1024 * 1024) {
+                  window.alert('Ukuran foto maksimal 5 MB.');
+                  e.target.value = '';
+                  return;
+                }
+
+                const reader = new FileReader();
+
+                reader.onload = () => {
+                  set('image', String(reader.result || ''));
+                };
+
+                reader.onerror = () => {
+                  window.alert('Foto gagal dibaca. Silakan coba lagi.');
+                };
+
+                reader.readAsDataURL(file);
+              }}
+            />
+
+
+            <button
+              type="button"
+              className="input"
+              style={{
+                width: '100%',
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                gap: '8px',
+                cursor: 'pointer',
+                boxSizing: 'border-box',
+                borderColor : '#6e1414',
+                color: '#6e1414'
+              }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+            {/*   <icon name="upload" size="sm" /> */}
+              {f.image ? 'Ganti Foto' : 'Pilih Foto'}
+            </button>
+
+
+            <p className="muted sm">
+              {f.image
+                ? 'Foto sudah dipilih.'
+                : 'Belum ada foto dipilih.'}
+              {' '}Maksimal 5 MB.
+            </p>
+
+            {f.image && (
+              <div className="stack">
+                <img
+                  src={f.image}
+                  alt="Pratinjau foto menu"
+                  style={{ width: '100%', maxHeight: 160, objectFit: 'contain', borderRadius: 8 }}
+                />
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => set('image', '')}>
+                  Hapus foto, gunakan emoji
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
