@@ -9,6 +9,7 @@ export default function OwnerLayout() {
   const ITEMS = [
     { to: '/pemilik/kalender', label: 'Kalender', icon: 'cal' },
     { to: '/pemilik/menu', label: 'Menu dan Kategori', icon: 'book' },
+    { to: '/pemilik/kasir', label: 'Kelola Kasir', icon: 'user' },
     { to: '/pemilik/penjualan', label: 'Penjualan', icon: 'chart' },
     { to: '/pemilik/performa', label: 'Performa Kasir', icon: 'user' },
     {
