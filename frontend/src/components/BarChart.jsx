@@ -1,57 +1,84 @@
+import {
+  Bar,
+  BarChart as RechartsBarChart,
+  Brush,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { rupiah, rupiahShort } from '../utils.js';
 
-function niceMax(v) {
-  const e = Math.pow(10, Math.floor(Math.log10(v)));
-  const f = v / e;
-  const nf = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
-  return nf * e;
-}
+const AXIS_TICK = { fill: 'var(--mute)', fontSize: 11 };
 
-// Diagram batang sederhana (SVG, responsif)
 export default function BarChart({ data, height = 260 }) {
-  const W = 680;
-  const H = height;
-  const padL = 56;
-  const padR = 8;
-  const padT = 12;
-  const padB = 30;
-  const max = Math.max(1, ...data.map((d) => d.value));
-  const nice = niceMax(max);
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => nice * f);
-  const bw = (W - padL - padR) / data.length;
-  const every = Math.ceil(data.length / 12);
+  if (data.length === 0) {
+    return <p className="empty-note">Belum ada penjualan pada periode ini.</p>;
+  }
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label="Diagram penjualan">
-      {ticks.map((t) => {
-        const y = padT + (H - padT - padB) * (1 - t / nice);
-        return (
-          <g key={t}>
-            <line x1={padL} x2={W - padR} y1={y} y2={y} className="grid" />
-            <text x={padL - 8} y={y + 4} textAnchor="end" className="ax">
-              {rupiahShort(t)}
-            </text>
-          </g>
-        );
-      })}
-      {data.map((d, i) => {
-        const h = (H - padT - padB) * (d.value / nice);
-        const w = bw * 0.68;
-        const x = padL + i * bw + (bw - w) / 2;
-        const y = H - padB - h;
-        return (
-          <g key={i}>
-            <rect x={x} y={y} width={w} height={Math.max(h, 0)} rx={Math.min(4, w / 2)} className={'bar' + (d.hl ? ' hl' : '')}>
-              <title>{`${d.title || d.label}: ${rupiah(d.value)}`}</title>
-            </rect>
-            {i % every === 0 && (
-              <text x={x + w / 2} y={H - 10} textAnchor="middle" className="ax">
-                {d.label}
-              </text>
+    <div className="chart-wrap" style={{ height }} role="img" aria-label="Diagram penjualan">
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsBarChart data={data} accessibilityLayer margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <CartesianGrid stroke="var(--line)" vertical={false} />
+          <XAxis
+            dataKey="label"
+            axisLine={false}
+            tickLine={false}
+            tick={AXIS_TICK}
+            interval="preserveStartEnd"
+            minTickGap={12}
+          />
+          <YAxis
+            width={52}
+            axisLine={false}
+            tickLine={false}
+            tick={AXIS_TICK}
+            tickFormatter={rupiahShort}
+          />
+          <Tooltip
+            cursor={{ fill: 'rgba(20, 18, 17, 0.05)' }}
+            contentStyle={{
+              background: '#fff',
+              border: '1px solid var(--line)',
+              borderRadius: 10,
+              boxShadow: 'var(--shadow)',
+              fontSize: 12,
+              fontFamily: 'inherit',
+            }}
+            labelStyle={{ color: 'var(--mute)', fontWeight: 600, marginBottom: 4 }}
+            itemStyle={{ color: 'var(--ink)', fontWeight: 700 }}
+            labelFormatter={(label, payload) => payload?.[0]?.payload?.title ?? label}
+            formatter={(value) => [rupiah(value), 'Penjualan']}
+          />
+          <Bar dataKey="value" name="Penjualan" radius={[4, 4, 0, 0]} maxBarSize={54}>
+            {data.map((point) => (
+              <Cell key={point.label} fill={point.hl ? 'var(--red)' : 'var(--ink)'} />
+            ))}
+            {data.length <= 7 && (
+              <LabelList
+                dataKey="value"
+                position="top"
+                formatter={(value) => (value ? rupiahShort(value) : '')}
+                fill="var(--mute)"
+                fontSize={10}
+              />
             )}
-          </g>
-        );
-      })}
-    </svg>
+          </Bar>
+          {data.length > 14 && (
+            <Brush
+              dataKey="label"
+              height={26}
+              travellerWidth={12}
+              stroke="var(--red)"
+              fill="#fff"
+            />
+          )}
+        </RechartsBarChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
