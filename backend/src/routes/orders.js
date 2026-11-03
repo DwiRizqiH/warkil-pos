@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { forbidden } from '../lib/errors.js';
 import { ok } from '../lib/respond.js';
+import { businessDate } from '../lib/wib.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createPaidOrder, ordersForDate } from '../services/orders.js';
@@ -27,7 +29,13 @@ ordersRouter.use(requireAuth);
 
 ordersRouter.get('/', validate({ query: listQuery }), async (req, res, next) => {
   try {
-    ok(res, await ordersForDate(req.query.date));
+    const today = businessDate();
+    // Cashiers only need today's queue; historical sales stay owner-only.
+    if (req.auth.role !== 'OWNER' && req.query.date && req.query.date !== today) {
+      next(forbidden('Kasir hanya dapat melihat pesanan hari ini'));
+      return;
+    }
+    ok(res, await ordersForDate(req.auth.role === 'OWNER' ? req.query.date : today));
   } catch (err) {
     next(err);
   }

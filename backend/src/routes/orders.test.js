@@ -114,6 +114,18 @@ describe('GET /api/orders', () => {
     expect(res.body.data).toEqual([]);
   });
 
+  it('mengizinkan kasir melihat pesanan hari ini', async () => {
+    await request(app).post('/api/orders').set('Cookie', cashierCookie).send(body([{ productId: 'm1', qty: 1 }]));
+    const res = await request(app).get(`/api/orders?date=${businessDate()}`).set('Cookie', cashierCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+  });
+
+  it('menolak kasir yang meminta riwayat tanggal lain', async () => {
+    const res = await request(app).get('/api/orders?date=2020-01-01').set('Cookie', cashierCookie);
+    expect(res.status).toBe(403);
+  });
+
   it('menolak permintaan tanpa login', async () => {
     expect((await request(app).get('/api/orders')).status).toBe(401);
   });
