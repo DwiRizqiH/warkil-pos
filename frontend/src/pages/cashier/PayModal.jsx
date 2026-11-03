@@ -3,37 +3,42 @@ import { QRCodeSVG } from 'qrcode.react';
 import Modal from '../../components/Modal.jsx';
 import Icon from '../../components/Icon.jsx';
 import { ReceiptModal } from '../../components/Receipt.jsx';
-import { useStore } from '../../store.jsx';
-import { useAuth } from '../../auth/AuthContext.jsx';
 import { useCart } from '../../context/CartContext.jsx';
+import { api } from '../../api/client.js';
 import { rupiah } from '../../utils.js';
 
 export default function PayModal({ onClose, onDone }) {
-  const { createOrder } = useStore();
-  const { user } = useAuth();
   const cart = useCart();
   const [step, setStep] = useState('choose'); // choose | cash | qris | done
   const [received, setReceived] = useState('');
   const [tx, setTx] = useState(null);
   const [receipt, setReceipt] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [error, setError] = useState('');
   const ref = useRef(`KKA${Date.now().toString().slice(-6)}`);
 
   const total = cart.total;
-
-  const finalize = (payment) => {
-    const t = createOrder({
-      orderType: cart.orderType,
-      payment,
-      // Sudah dibayar berarti pesanan siap: kasir tidak perlu menandainya lagi dari papan pesanan.
-      status: 'siap',
-      cashier: user?.name,
-      items: cart.lines.map(({ id, name, qty, price, note }) => ({ id, name, qty, price, note })),
-    });
-    setTx(t);
-    setStep('done');
-  };
-
   const rec = Number(received) || 0;
+
+  const finalize = async (payment) => {
+    setPosting(true);
+    setError('');
+    try {
+      // Money, queue and code are assigned by the server; the receipt shows what was stored.
+      const t = await api.post('/orders', {
+        orderType: cart.orderType,
+        payment,
+        receivedAmount: payment === 'Cash' ? rec : undefined,
+        items: cart.lines.map(({ id, qty, note }) => ({ productId: id, qty, note })),
+      });
+      setTx(t);
+      setStep('done');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPosting(false);
+    }
+  };
   const quick = [...new Set([total, Math.ceil(total / 50000) * 50000, Math.ceil(total / 100000) * 100000, 200000])]
     .filter((v) => v >= total)
     .slice(0, 4);
@@ -49,6 +54,8 @@ export default function PayModal({ onClose, onDone }) {
             <b>{rupiah(total)}</b>
           </div>
         )}
+
+        {error && <p className="form-error" role="alert">{error}</p>}
 
         {step === 'choose' && (
           <div className="pay-choices">
@@ -89,8 +96,8 @@ export default function PayModal({ onClose, onDone }) {
             </div>
             <div className="row end">
               <button className="btn btn-ghost" onClick={() => setStep('choose')}>Kembali</button>
-              <button className="btn btn-primary btn-lg" disabled={rec < total} onClick={() => finalize('Cash')}>
-                Konfirmasi pembayaran
+              <button className="btn btn-primary btn-lg" disabled={rec < total || posting} onClick={() => finalize('Cash')}>
+                {posting ? 'Menyimpan…' : 'Konfirmasi pembayaran'}
               </button>
             </div>
           </div>
@@ -105,8 +112,8 @@ export default function PayModal({ onClose, onDone }) {
             <div className="waiting"><i /> Menunggu pembayaran…</div>
             <div className="row end">
               <button className="btn btn-ghost" onClick={() => setStep('choose')}>Kembali</button>
-              <button className="btn btn-dark" onClick={() => finalize('QRIS')}>
-                Simulasikan: pembayaran diterima
+              <button className="btn btn-dark" disabled={posting} onClick={() => finalize('QRIS')}>
+                {posting ? 'Menyimpan…' : 'Simulasikan: pembayaran diterima'}
               </button>
             </div>
           </div>

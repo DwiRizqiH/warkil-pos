@@ -6,6 +6,7 @@ import App from './App.jsx';
 import { StoreProvider } from './store.jsx';
 import { CartProvider } from './context/CartContext.jsx';
 import { AuthProvider } from './auth/AuthContext.jsx';
+import RealtimeOrders from './realtime.jsx';
 import { queryClient } from './api/queryClient.js';
 import './index.css';
 
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')).render(
         <CartProvider>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
+              <RealtimeOrders />
               <App />
             </AuthProvider>
           </QueryClientProvider>

@@ -27,6 +27,7 @@ enum OrderType {
 
 enum PaymentMethod {
   CASH
+  QRIS
   MIDTRANS
 }
 
