@@ -1,12 +1,78 @@
 
 import { useMemo, useState } from 'react';
+import DataTable from 'datatables.net-react';
+import DT from 'datatables.net-dt';
+import 'datatables.net-dt/css/dataTables.dataTables.css';
 import BarChart from '../../components/BarChart.jsx';
 import StatTile from '../../components/StatTile.jsx';
+import Icon from '../../components/Icon.jsx';
 import { useStore } from '../../store.jsx';
 import { isSale, orderTypeLabel, txQty } from '../../selectors.js';
+import { downloadCsv } from '../../csv.js';
 import { MONTHS_ID, addDays, fmtDateShort, parseYmd, rupiah, ymd } from '../../utils.js';
 
-const PAGE = 15;
+// `use` here registers the DataTables library with its React wrapper; it is not a React hook.
+// eslint-disable-next-line react-hooks/rules-of-hooks
+DataTable.use(DT);
+
+const SALES_COLUMNS = [
+  {
+    data: 'date',
+    title: 'Tanggal',
+    type: 'string',
+    render: (value, type) => (type === 'sort' ? value : fmtDateShort(value)),
+  },
+  { data: 'time', title: 'Jam', type: 'string' },
+  { data: 'id', title: 'ID Transaksi', className: 'mono', type: 'string' },
+  {
+    data: 'queue',
+    title: 'Antrian',
+    type: 'num',
+    render: (value, type) => (type === 'display' ? `<span class="qchip">${value}</span>` : value),
+  },
+  { data: 'type', title: 'Tipe', type: 'string' },
+  { data: 'cashier', title: 'Kasir', type: 'string', render: DT.render.text() },
+  { data: 'qty', title: 'Item', type: 'num' },
+  { data: 'payment', title: 'Bayar', type: 'string' },
+  {
+    data: 'total',
+    title: 'Total',
+    className: 'r',
+    type: 'num',
+    render: (value, type) => {
+      if (type === 'sort') return value;
+
+      const text = rupiah(value);
+      return type === 'display' ? `<b>${text}</b>` : text;
+    },
+  },
+];
+
+const SALES_TABLE_OPTIONS = {
+  order: [
+    [0, 'desc'],
+    [1, 'desc'],
+  ],
+  pageLength: 15,
+  lengthMenu: [10, 15, 25, 50, 100],
+  autoWidth: false,
+  language: {
+    search: 'Cari:',
+    searchPlaceholder: 'Cari transaksi…',
+    lengthMenu: 'Tampilkan _MENU_ transaksi',
+    info: 'Menampilkan _START_–_END_ dari _TOTAL_ transaksi',
+    infoEmpty: 'Tidak ada transaksi',
+    infoFiltered: '(difilter dari _MAX_ transaksi)',
+    zeroRecords: 'Tidak ada transaksi yang cocok.',
+    emptyTable: 'Tidak ada transaksi pada periode ini.',
+    paginate: {
+      first: 'Awal',
+      previous: 'Sebelumnya',
+      next: 'Berikutnya',
+      last: 'Akhir',
+    },
+  },
+};
 
 export default function OwnerSales() {
   const { allTx, now } = useStore();
@@ -14,7 +80,6 @@ export default function OwnerSales() {
 
   const [mode, setMode] = useState('harian');
   const [period, setPeriod] = useState('bulan');
-  const [page, setPage] = useState(0);
 
   // Menentukan batas tanggal berdasarkan filter periode.
   const startDate = useMemo(() => {
@@ -106,9 +171,21 @@ export default function OwnerSales() {
       });
   }, [rows, today]);
 
-  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
-  const cur = Math.min(page, pages - 1);
-  const shown = rows.slice(cur * PAGE, cur * PAGE + PAGE);
+  const tableRows = useMemo(
+    () =>
+      rows.map((t) => ({
+        date: t.date,
+        time: t.time,
+        id: t.id,
+        queue: t.queue,
+        type: orderTypeLabel(t),
+        cashier: t.cashier,
+        qty: txQty(t),
+        payment: t.payment,
+        total: t.total,
+      })),
+    [rows],
+  );
 
   const periodLabel = {
     hari: 'Hari Ini',
@@ -116,14 +193,27 @@ export default function OwnerSales() {
     semua: 'Semua Hari',
   }[period];
 
-  const changePeriod = (value) => {
-    setPeriod(value);
-    setPage(0);
+  const downloadSales = () => {
+    downloadCsv(`rekap-penjualan-${startDate}-${today}.csv`, [
+      ['Rekap Penjualan', 'Warung Kikil Abang'],
+      ['Periode', startDate, today],
+      ['Total Penjualan', summary.total],
+      ['Total Transaksi', summary.count],
+      ['Menu Terjual', summary.qty],
+      [],
+      ['Tanggal', 'Jam', 'ID Transaksi', 'Antrian', 'Tipe', 'Kasir', 'Item', 'Bayar', 'Total'],
+      ...rows.map((t) => [t.date, t.time, t.id, t.queue, orderTypeLabel(t), t.cashier, txQty(t), t.payment, t.total]),
+    ]);
   };
 
   return (
     <div className="stack-lg">
-      <h1 className="h1">Penjualan</h1>
+      <div className="spread wrap">
+        <h1 className="h1">Penjualan</h1>
+        <button className="btn btn-ghost" disabled={rows.length === 0} onClick={downloadSales}>
+          <Icon name="download" size={18} /> Unduh Excel
+        </button>
+      </div>
 
       <section className="stack">
         <div className="spread wrap">
@@ -134,19 +224,19 @@ export default function OwnerSales() {
         <div className="seg">
           <button
             className={period === 'hari' ? 'on' : ''}
-            onClick={() => changePeriod('hari')}
+            onClick={() => setPeriod('hari')}
           >
             Hari Ini
           </button>
           <button
             className={period === 'bulan' ? 'on' : ''}
-            onClick={() => changePeriod('bulan')}
+            onClick={() => setPeriod('bulan')}
           >
             Bulan Ini
           </button>
           <button
             className={period === 'semua' ? 'on' : ''}
-            onClick={() => changePeriod('semua')}
+            onClick={() => setPeriod('semua')}
           >
             Semua Hari
           </button>
@@ -197,68 +287,14 @@ export default function OwnerSales() {
           </span>
         </div>
 
-        <div className="table-wrap">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Tanggal</th>
-                <th>Jam</th>
-                <th>ID Transaksi</th>
-                <th>Antrian</th>
-                <th>Tipe</th>
-                <th>Kasir</th>
-                <th>Item</th>
-                <th>Bayar</th>
-                <th className="r">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((t) => (
-                <tr key={t.id}>
-                  <td>{fmtDateShort(t.date)}</td>
-                  <td>{t.time}</td>
-                  <td className="mono">{t.id}</td>
-                  <td><span className="qchip">{t.queue}</span></td>
-                  <td>{orderTypeLabel(t)}</td>
-                  <td>{t.cashier}</td>
-                  <td>{txQty(t)}</td>
-                  <td>{t.payment}</td>
-                  <td className="r"><b>{rupiah(t.total)}</b></td>
-                </tr>
-              ))}
-
-              {shown.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="empty-note">
-                    Tidak ada transaksi pada periode ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="spread">
-          <span className="muted sm">
-            Halaman {cur + 1} dari {pages}
-          </span>
-
-          <div className="row">
-            <button
-              className="btn btn-ghost btn-sm"
-              disabled={cur === 0}
-              onClick={() => setPage(cur - 1)}
-            >
-              Sebelumnya
-            </button>
-            <button
-              className="btn btn-ghost btn-sm"
-              disabled={cur >= pages - 1}
-              onClick={() => setPage(cur + 1)}
-            >
-              Berikutnya
-            </button>
-          </div>
+        <div className="sales-table">
+          <DataTable
+            key={period}
+            data={tableRows}
+            columns={SALES_COLUMNS}
+            options={SALES_TABLE_OPTIONS}
+            className="tbl"
+          />
         </div>
       </section>
     </div>

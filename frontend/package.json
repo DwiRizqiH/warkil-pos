@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.2",
+    "datatables.net-dt": "^2.3.8",
+    "datatables.net-react": "^1.0.2",
     "qrcode.react": "^4.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

@@ -364,6 +364,61 @@ button.cal-cell:hover { border-color: var(--ink); }
 .tbl .r { text-align: right; font-variant-numeric: tabular-nums; }
 .tbl tr:hover td { background: #fcfaf9; }
 
+/* ---------- DataTables: tabel transaksi pemilik ---------- */
+.sales-table .dt-container { font-size: 13.5px; }
+.sales-table .dt-layout-row { margin: 0; }
+.sales-table .dt-layout-row:first-child { margin-bottom: 14px; }
+.sales-table .dt-layout-row:last-child { margin-top: 14px; }
+.sales-table .dt-layout-table > div { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+.sales-table .dt-length,
+.sales-table .dt-search,
+.sales-table .dt-info { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--mute); }
+.sales-table .dt-search input,
+.sales-table .dt-length select {
+  margin: 0; padding: 8px 11px; border: 1px solid var(--line); border-radius: 10px;
+  background: #fff; color: var(--ink); font: inherit; font-size: 13px;
+}
+.sales-table .dt-search input { min-width: 220px; }
+.sales-table .dt-search input:focus,
+.sales-table .dt-length select:focus { outline: 2px solid var(--red); outline-offset: -1px; border-color: transparent; }
+.sales-table table.dataTable { width: 100%; margin: 0 !important; border-collapse: collapse; font-size: 13.5px; }
+.sales-table table.dataTable > thead > tr > th {
+  padding: 9px 12px; border-bottom: 1px solid var(--line); background: #fcfaf9;
+  font-size: 12px; font-weight: 600; color: var(--mute); white-space: nowrap;
+}
+.sales-table table.dataTable > tbody > tr > td {
+  padding: 10px 12px; border-top: 1px solid var(--line); white-space: nowrap;
+}
+.sales-table table.dataTable > tbody > tr:hover > td { background: #fcfaf9; }
+.sales-table table.dataTable th.r,
+.sales-table table.dataTable td.r { text-align: right; font-variant-numeric: tabular-nums; }
+.sales-table table.dataTable thead th .dt-column-order { color: var(--mute); }
+.sales-table table.dataTable thead th.dt-ordering-asc .dt-column-order::before,
+.sales-table table.dataTable thead th.dt-ordering-desc .dt-column-order::after { color: var(--red); opacity: 1; }
+.sales-table .dt-empty { padding: 28px 16px !important; text-align: center; color: var(--mute); }
+.sales-table .dt-paging { display: flex; gap: 4px; }
+.sales-table .dt-paging .dt-paging-button {
+  min-width: 32px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 9px;
+  background: #fff; color: var(--ink-2) !important; font-size: 13px; font-weight: 700; line-height: 1.2;
+}
+.sales-table .dt-paging .dt-paging-button:hover:not(.disabled) { border-color: var(--ink); background: var(--ink); color: #fff !important; }
+.sales-table .dt-paging .dt-paging-button.current { border-color: var(--ink); background: var(--ink); color: #fff !important; }
+.sales-table .dt-paging .dt-paging-button.disabled { opacity: 0.35; }
+.sales-table .dt-info { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 767px) {
+  .sales-table .dt-layout-row:not(.dt-layout-table) { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sales-table .dt-layout-row:not(.dt-layout-table) .dt-layout-cell { display: flex; width: 100%; text-align: left; margin: 0; }
+  .sales-table .dt-layout-row:not(.dt-layout-table) .dt-layout-cell > * { margin: 0; }
+  .sales-table .dt-search input { width: 100%; min-width: 0; }
+  .sales-table .dt-info { width: 100%; }
+  .sales-table .dt-paging { flex-wrap: wrap; }
+  .sales-table .dt-paging .dt-paging-button { padding: 6px 8px; }
+  .sales-table .dt-paging .dt-paging-button.first,
+  .sales-table .dt-paging .dt-paging-button.last,
+  .sales-table .dt-paging .dt-paging-button:not(.previous, .next, .current) { display: none; }
+}
+
 /* ---------- landing / login ---------- */
 .landing { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); background: var(--bg); }
 .landing-intro {

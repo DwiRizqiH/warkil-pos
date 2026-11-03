@@ -110,7 +110,7 @@ Isi setelah menjalankan test; jangan menandai lulus hanya karena test berhasil d
 
 | Bagian   | Perintah                  | Hasil              | Catatan                       |
 | -------- | ------------------------- | ------------------ | ----------------------------- |
-| Frontend | `cd frontend && npm test` | Lulus, 31/31       | 9 berkas test                 |
+| Frontend | `cd frontend && npm test` | Lulus, 32/32       | 10 berkas test                |
 | Backend  | `cd backend && npm test`  | Lulus, 87/87       | 13 berkas test, database uji  |
 
 ## Kriteria selesai QA
