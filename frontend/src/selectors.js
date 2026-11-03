@@ -74,6 +74,17 @@ export function rangeSum(index, fromStr, toStr) {
   return { count, qty, total };
 }
 
+// Orders written during a shift beat the roster: a cashier can take over a slot.
+function cashierOfShift(txs, fallback) {
+  const tally = new Map();
+  for (const t of txs) {
+    if (t.cashier) tally.set(t.cashier, (tally.get(t.cashier) || 0) + 1);
+  }
+  let best = null;
+  for (const [name, count] of tally) if (!best || count > best[1]) best = [name, count];
+  return best ? best[0] : fallback;
+}
+
 // Shift pada suatu tanggal: nama kasir, jam login/logout, total penjualan
 export function getShifts(index, date, { session, now }) {
   const today = ymd(now);
@@ -92,11 +103,11 @@ export function getShifts(index, date, { session, now }) {
         logout = null;
       }
     }
-    let cashier = scheduledCashier(date, idx);
+    const s = day?.shifts[idx] || { count: 0, qty: 0, total: 0, txs: [] };
+    let cashier = cashierOfShift(s.txs, scheduledCashier(date, idx));
     if (date === today && session && session.date === today && shiftIndexOf(session.loginTime) === idx) {
       cashier = session.cashier;
     }
-    const s = day?.shifts[idx] || { count: 0, qty: 0, total: 0, txs: [] };
     out.push({
       idx,
       date,

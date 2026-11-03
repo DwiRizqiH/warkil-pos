@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
+import BrandMark from './BrandMark.jsx';
 
 // Kerangka halaman dengan burger di kiri atas (dipakai halaman Pemilik & Kasir)
 export default function Shell({ role, home, items, right, children }) {
   const [open, setOpen] = useState(false);
   const loc = useLocation();
+  const nav = useNavigate();
   useEffect(() => setOpen(false), [loc.pathname]);
+
+  const atHome = loc.pathname === home;
+  const goBack = () => (window.history.state?.idx > 0 ? nav(-1) : nav(home));
 
   return (
     <div className="shell">
@@ -14,8 +19,13 @@ export default function Shell({ role, home, items, right, children }) {
         <button className="icon-btn dark" onClick={() => setOpen(true)} aria-label="Buka menu">
           <Icon name="menu" />
         </button>
+        {!atHome && (
+          <button className="icon-btn dark" onClick={goBack} aria-label="Kembali ke halaman sebelumnya">
+            <Icon name="back" />
+          </button>
+        )}
         <Link to={home} className="brand">
-          <span className="brand-mark">K</span>
+          <BrandMark />
           <span className="brand-text">
             <b>Kikil Abang</b>
             <small>{role}</small>
@@ -28,7 +38,7 @@ export default function Shell({ role, home, items, right, children }) {
       <aside className={'drawer' + (open ? ' open' : '')} aria-hidden={!open}>
         <div className="drawer-head">
           <div className="brand">
-            <span className="brand-mark">K</span>
+            <BrandMark />
             <span className="brand-text">
               <b>Warung Kikil Abang</b>
               <small>{role}</small>

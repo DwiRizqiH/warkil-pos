@@ -12,7 +12,7 @@ docker compose up -d              # PostgreSQL dev (5433) + database uji (5434)
 cd backend && npm run migrate     # prisma migrate dev
 cd backend && npm run seed        # data dasar
 cd backend && npm run seed:demo   # riwayat 120 hari, hanya untuk development
-cd backend && npm run seed:reset  # hapus pesanan dan shift, sisakan menu dan kasir
+cd backend && WIPE_CONFIRMED=wipe npm run seed:reset  # hapus pesanan dan shift, sisakan menu dan kasir
 cd backend && npm run dev         # API di http://127.0.0.1:3100
 cd frontend && npm run dev        # Vite di http://localhost:5173, proxy /api
 ```

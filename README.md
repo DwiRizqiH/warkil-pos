@@ -74,6 +74,20 @@ Salin bagian ini untuk setiap bug atau usulan revisi. Bedakan bug (perilaku tida
 
 Jangan masukkan PIN, password, token, cookie, atau data pribadi ke laporan maupun bukti.
 
+## TODO
+
+### Midtrans
+
+Status: ditunda. Pembayaran QRIS di halaman Kasir masih simulasi lokal dan belum memanggil Midtrans.
+
+Yang belum dikerjakan:
+
+- Endpoint pembuatan transaksi Snap dan halaman pembayaran.
+- Webhook notifikasi dengan verifikasi signature SHA512, idempotensi, dan rekonsiliasi status pesanan.
+- Uji sandbox untuk pembayaran berhasil, gagal, kedaluwarsa, dan webhook ganda.
+
+Variabel `.env` sudah tersedia: `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_IS_PRODUCTION`, `MIDTRANS_EXPIRY_MINUTES`. Saat melanjutkan, verifikasi dulu kunci sandbox di server — kunci yang terpasang sekarang ditolak Midtrans.
+
 ## Menjalankan test otomatis
 
 Jalankan test frontend dari folder `frontend`:
@@ -94,10 +108,10 @@ Test backend menggunakan database uji di port **5434** dan dapat mengosongkan ta
 
 Isi setelah menjalankan test; jangan menandai lulus hanya karena test berhasil dimulai.
 
-| Bagian   | Perintah                  | Hasil            | Catatan                       |
-| -------- | ------------------------- | ---------------- | ----------------------------- |
-| Frontend | `cd frontend && npm test` | Belum dijalankan |                               |
-| Backend  | `cd backend && npm test`  | Belum dijalankan | Pastikan memakai database uji |
+| Bagian   | Perintah                  | Hasil              | Catatan                       |
+| -------- | ------------------------- | ------------------ | ----------------------------- |
+| Frontend | `cd frontend && npm test` | Lulus, 30/30       | 8 berkas test                 |
+| Backend  | `cd backend && npm test`  | Lulus, 78/78       | 12 berkas test, database uji  |
 
 ## Kriteria selesai QA
 

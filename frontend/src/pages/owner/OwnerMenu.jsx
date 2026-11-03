@@ -7,8 +7,43 @@ import { grossOf, priceOf } from '../../data.js';
 import { menusForCategory } from '../../selectors.js';
 import { rupiah } from '../../utils.js';
 
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+function readPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Foto gagal dibaca. Silakan coba lagi.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadPhoto(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Foto tidak bisa ditampilkan. Pilih file lain.'));
+    image.src = src;
+  });
+}
+
+// localStorage is the store, so a 5 MB camera photo would blow the quota. Shrink to menu-card size.
+async function preparePhoto(file) {
+  const source = await readPhoto(file);
+  const image = await loadPhoto(source);
+  const scale = Math.min(1, 900 / Math.max(image.width, image.height));
+  if (scale === 1 && source.length < 500 * 1024) return source;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(image.width * scale);
+  canvas.height = Math.round(image.height * scale);
+  canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.82);
+}
+
 function MenuForm({ initial, defaultCat, menus, categories, onSave, onClose }) {
   const fileInputRef = useRef(null);
+  const [photoError, setPhotoError] = useState('');
   const [f, setF] = useState(() =>
     initial
       ? {
@@ -136,79 +171,46 @@ function MenuForm({ initial, defaultCat, menus, categories, onSave, onClose }) {
             <p className="muted sm">Gunakan emoji jika belum memiliki foto menu.</p>
           </div>
           <div>
-            <label className="label">Upload foto (opsional)</label>
+            <label className="label">Foto menu (opsional)</label>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              style={{ display: 'none' }}
-              onChange={(e) => {
+              hidden
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
+                e.target.value = '';
                 if (!file) return;
-
                 if (!file.type.startsWith('image/')) {
-                  window.alert('Pilih file gambar yang valid.');
-                  e.target.value = '';
+                  setPhotoError('Pilih file gambar yang valid.');
                   return;
                 }
-
-                if (file.size > 5 * 1024 * 1024) {
-                  window.alert('Ukuran foto maksimal 5 MB.');
-                  e.target.value = '';
+                if (file.size > MAX_PHOTO_BYTES) {
+                  setPhotoError('Ukuran foto maksimal 5 MB.');
                   return;
                 }
-
-                const reader = new FileReader();
-
-                reader.onload = () => {
-                  set('image', String(reader.result || ''));
-                };
-
-                reader.onerror = () => {
-                  window.alert('Foto gagal dibaca. Silakan coba lagi.');
-                };
-
-                reader.readAsDataURL(file);
+                setPhotoError('');
+                try {
+                  set('image', await preparePhoto(file));
+                } catch (error) {
+                  setPhotoError(error.message);
+                }
               }}
             />
 
-
-            <button
-              type="button"
-              className="input"
-              style={{
-                width: '100%',
-                minHeight: '44px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                gap: '8px',
-                cursor: 'pointer',
-                boxSizing: 'border-box',
-                borderColor : '#6e1414',
-                color: '#6e1414'
-              }}
-              onClick={() => fileInputRef.current?.click()}
-            >
-            {/*   <icon name="upload" size="sm" /> */}
-              {f.image ? 'Ganti Foto' : 'Pilih Foto'}
+            <button type="button" className="upload-btn" onClick={() => fileInputRef.current?.click()}>
+              <Icon name="upload" size={18} />
+              {f.image ? 'Ganti foto' : 'Pilih foto'}
             </button>
 
-
             <p className="muted sm">
-              {f.image
-                ? 'Foto sudah dipilih.'
-                : 'Belum ada foto dipilih.'}
-              {' '}Maksimal 5 MB.
+              {f.image ? 'Foto sudah dipilih.' : 'Belum ada foto, emoji tetap dipakai.'} Maksimal 5 MB.
             </p>
+            {photoError && <p className="form-error">{photoError}</p>}
 
             {f.image && (
-              <div className="stack">
-                <img
-                  src={f.image}
-                  alt="Pratinjau foto menu"
-                  style={{ width: '100%', maxHeight: 160, objectFit: 'contain', borderRadius: 8 }}
-                />
+              <div className="upload-preview">
+                <img src={f.image} alt="Pratinjau foto menu" />
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => set('image', '')}>
                   Hapus foto, gunakan emoji
                 </button>
@@ -274,7 +276,8 @@ export default function OwnerMenu() {
   const rank = useMemo(() => new Map(best.map((b) => [b.id, b])), [best]);
   const catOrder = useMemo(() => new Map(categories.map((c, i) => [c.id, i])), [categories]);
   const list = useMemo(() => menusForCategory(menus, catId, rank, catOrder), [menus, catId, rank, catOrder]);
-  const defaultCat = catId === 'all' ? categories[0]?.id : catId;
+  // "Semua" tab: start on a single-item category so the add form opens with price, not package builder.
+  const defaultCat = catId === 'all' ? (categories.find((c) => c.id !== 'paket')?.id ?? categories[0]?.id) : catId;
 
   const save = (menu) => {
     setMenus((prev) => (prev.some((m) => m.id === menu.id) ? prev.map((m) => (m.id === menu.id ? menu : m)) : [...prev, menu]));

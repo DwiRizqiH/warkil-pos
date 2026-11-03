@@ -8,7 +8,7 @@ export default defineConfig({
     host: true,
     port: 5173,
     allowedHosts: true,
-    proxy: { '/api': { target: 'https://testwarkil.remcp.com', changeOrigin: true } },
+    proxy: { '/api': { target: 'http://127.0.0.1:3100', changeOrigin: true } },
   },
   preview: { host: true, port: 4173, allowedHosts: true },
   test: { environment: 'jsdom', globals: true, include: ['src/**/*.test.{js,jsx}'] },

@@ -27,10 +27,9 @@ export function hashString(text) {
 
 // The mockup's own weights: how often each menu sells, and how busy each hour 08:00-21:00 is.
 const MENU_WEIGHTS = {
-  m1: 14, m2: 10, m3: 5, m4: 6, m5: 4, m6: 4,
-  d1: 11, d2: 7.5, d3: 2, d4: 3, d5: 2, d6: 3,
-  s1: 7, s2: 4, s3: 3, s4: 3, s5: 2, s6: 2,
-  p1: 5, p2: 4, p3: 2,
+  m1: 14, m2: 10, m3: 6, m4: 8, m5: 12, m6: 7, m7: 4,
+  d1: 14, d2: 6, d3: 5,
+  s1: 10,
 };
 const HOUR_WEIGHTS = [2, 4, 6, 9, 10, 7, 4, 3, 4, 6, 9, 10, 7, 3];
 
@@ -55,6 +54,9 @@ function pick(rng, weights) {
 
 // The relations have no cascade, so the children go first; users and menus are left alone.
 export async function clearOrderHistory(client = prisma) {
+  if (process.env.WIPE_CONFIRMED !== 'wipe') {
+    throw new Error('Menghapus pesanan dan shift butuh WIPE_CONFIRMED=wipe');
+  }
   await client.$transaction([
     client.orderItem.deleteMany(),
     client.payment.deleteMany(),
@@ -174,12 +176,20 @@ export async function generateDemoHistory(days = 120, client = prisma) {
   return orderCount;
 }
 
+export async function runDemoSeed({ days = 120, reset = false } = {}, client = prisma) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('seed:demo tidak boleh dijalankan di production');
+  }
+  if (reset) {
+    console.log('menghapus pesanan dan shift yang ada');
+    await clearOrderHistory(client);
+  }
+  return generateDemoHistory(days, client);
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const days = Number(process.env.SEED_DEMO_DAYS ?? 120);
-  if (process.env.SEED_DEMO_RESET === '1') {
-    console.log('menghapus pesanan dan shift yang ada');
-    await clearOrderHistory();
-  }
-  console.log(`riwayat demo dibuat: ${await generateDemoHistory(days)} pesanan`);
+  const reset = process.env.SEED_DEMO_RESET === '1';
+  console.log(`riwayat demo dibuat: ${await runDemoSeed({ days, reset })} pesanan`);
   await prisma.$disconnect();
 }

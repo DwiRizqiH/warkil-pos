@@ -14,18 +14,10 @@ export default function OwnerPerformance() {
   const focus = params.get('shift');
   const detailRefs = useRef(new Map());
 
-useEffect(() => {
-  if (!focus) return;
-
-  const target = detailRefs.current.get(focus);
-
-  if (target) {
-    target.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
-  }
-}, [focus, selected]);
+  useEffect(() => {
+    const target = focus ? detailRefs.current.get(focus) : null;
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [focus, selected]);
   const [cursor, setCursor] = useState(() => {
     const d = parseYmd(selected);
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -60,6 +52,7 @@ useEffect(() => {
             onSelect={(d) => setParams({ date: d })}
             getMark={getMark}
             todayStr={today}
+            salesByDate={index.daily}
           />
         </div>
 
@@ -82,34 +75,41 @@ useEffect(() => {
         </div>
       </div>
 
-{shifts.map((s) => (
-  <section key={s.idx} ref={(el) => { if (el) { detailRefs.current.set(String(s.idx), el); } else { detailRefs.current.delete(String(s.idx)); }}}  style={{ scrollMarginTop: '76px' }} className={'card card-pad stack' + (focus === String(s.idx) ? ' ring' : '')}>
-          <div className="spread wrap">
-            <h3>Detail penjualan · {s.cashier} ({s.label})</h3>
-            <span className="muted">{s.count} transaksi · <b>{rupiah(s.total)}</b></span>
-          </div>
-          <div className="table-wrap tall">
-            <table className="tbl">
-              <thead>
-                <tr><th>Jam</th><th>Antrian</th><th>Tipe</th><th>Pesanan</th><th>Bayar</th><th className="r">Total</th></tr>
-              </thead>
-              <tbody>
-                {[...s.txs].reverse().map((t) => (
-                  <tr key={t.id}>
-                    <td>{t.time}</td>
-                    <td><span className="qchip">{t.queue}</span></td>
-                    <td>{orderTypeLabel(t)}</td>
-                    <td className="wrap-cell">{t.items.map((i) => `${i.qty}× ${i.name}`).join(', ')} <span className="muted">({txQty(t)} item)</span></td>
-                    <td>{t.payment}</td>
-                    <td className="r"><b>{rupiah(t.total)}</b></td>
-                  </tr>
-                ))}
-                {s.txs.length === 0 && <tr><td colSpan={6} className="empty-note">Belum ada transaksi.</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ))}
+      {shifts.map((s) => {
+        const id = String(s.idx);
+        return (
+          <section
+            key={id}
+            ref={(el) => (el ? detailRefs.current.set(id, el) : detailRefs.current.delete(id))}
+            className={'card card-pad stack shift-detail' + (focus === id ? ' ring' : '')}
+          >
+            <div className="spread wrap">
+              <h3>Detail penjualan · {s.cashier} ({s.label})</h3>
+              <span className="muted">{s.count} transaksi · <b>{rupiah(s.total)}</b></span>
+            </div>
+            <div className="table-wrap tall">
+              <table className="tbl">
+                <thead>
+                  <tr><th>Jam</th><th>Antrian</th><th>Tipe</th><th>Pesanan</th><th>Bayar</th><th className="r">Total</th></tr>
+                </thead>
+                <tbody>
+                  {[...s.txs].reverse().map((t) => (
+                    <tr key={t.id}>
+                      <td>{t.time}</td>
+                      <td><span className="qchip">{t.queue}</span></td>
+                      <td>{orderTypeLabel(t)}</td>
+                      <td className="wrap-cell">{t.items.map((i) => `${i.qty}× ${i.name}`).join(', ')} <span className="muted">({txQty(t)} item)</span></td>
+                      <td>{t.payment}</td>
+                      <td className="r"><b>{rupiah(t.total)}</b></td>
+                    </tr>
+                  ))}
+                  {s.txs.length === 0 && <tr><td colSpan={6} className="empty-note">Belum ada transaksi.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }

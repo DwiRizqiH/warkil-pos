@@ -3,7 +3,7 @@ import { DEFAULT_CATEGORIES, DEFAULT_MENUS, generateHistory, scheduledCashier } 
 import { bestSellers, buildIndex } from './selectors.js';
 import { daysBetween, pad, parseYmd, shiftIndexOf, useNow, ymd } from './utils.js';
 
-const PREFIX = 'kikil:v2:';
+const PREFIX = 'kikil:v3:';
 const Ctx = createContext(null);
 export const useStore = () => useContext(Ctx);
 
@@ -64,7 +64,11 @@ export function StoreProvider({ children }) {
     () => BASE.map((t) => (overrides[t.id] ? { ...t, ...overrides[t.id] } : t)),
     [overrides]
   );
-  const allTx = useMemo(() => baseApplied.concat(extra), [baseApplied, extra]);
+  // Riwayat demo dihitung ulang tiap muat dan bisa memakai nomor urut yang sudah dipakai pesanan asli.
+  const allTx = useMemo(() => {
+    const created = new Set(extra.map((t) => t.id));
+    return baseApplied.filter((t) => !created.has(t.id)).concat(extra);
+  }, [baseApplied, extra]);
   const index = useMemo(() => buildIndex(allTx), [allTx]);
   const menusById = useMemo(() => new Map(menus.map((m) => [m.id, m])), [menus]);
 
