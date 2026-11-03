@@ -78,7 +78,7 @@ Jangan masukkan PIN, password, token, cookie, atau data pribadi ke laporan maupu
 
 ### Midtrans
 
-Status: ditunda. Pembayaran QRIS di halaman Kasir masih simulasi lokal dan belum memanggil Midtrans.
+Status: ditunda. Pembayaran QRIS di halaman Kasir masih simulasi (pesanan tersimpan, tetapi QR tidak memanggil Midtrans).
 
 Yang belum dikerjakan:
 
