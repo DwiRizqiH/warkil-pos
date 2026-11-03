@@ -88,10 +88,9 @@ export function generateHistory(menus, now = new Date(), daysBack = 120) {
   const ids = menus.map((m) => m.id);
   const wts = ids.map((id) => WEIGHTS[id] ?? 3);
   const out = [];
-  const today = ymd(now);
-  const nowMin = now.getHours() * 60 + now.getMinutes();
 
-  for (let k = daysBack; k >= 0; k--) {
+  // Today belongs to the server: real orders arrive over the API, never generated rows.
+  for (let k = daysBack; k >= 1; k--) {
     const day = addDays(now, -k);
     const date = ymd(day);
     const rng = mulberry32(hashStr(date));
@@ -113,7 +112,6 @@ export function generateHistory(menus, now = new Date(), daysBack = 120) {
       const payRoll = rng();
       const take = rng() < 0.2;
       const mins = hour * 60 + minute;
-      if (date === today && mins > nowMin - 2) continue;
       list.push({ mins, chosen, payRoll, take });
     }
 
@@ -128,8 +126,6 @@ export function generateHistory(menus, now = new Date(), daysBack = 120) {
         return { id, name: m.name, qty, price: priceOf(m, menus) };
       });
       const total = items.reduce((s, i) => s + i.price * i.qty, 0);
-      const age = date === today ? nowMin - t.mins : 9999;
-      const status = age > 25 ? 'selesai' : age > 12 ? 'siap' : 'proses';
       out.push({
         id: `TRX-${date.replace(/-/g, '')}-${pad(seq, 4)}`,
         date,
@@ -140,7 +136,7 @@ export function generateHistory(menus, now = new Date(), daysBack = 120) {
         items,
         note: '',
         total,
-        status,
+        status: 'selesai',
         cashier: scheduledCashier(date, shiftIndexOf(time)),
       });
     }
