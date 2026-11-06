@@ -1,85 +1,91 @@
-# Dokumentasi Sistem Kasir Warung Kikil Abang
+# Ringkasan Proyek — Warkil-Kasir
 
-## 1. Latar Belakang
+## 1. Tujuan dan Status Implementasi
 
-Warung Kikil Abang adalah usaha kuliner UMKM di Kabupaten Jombang yang selama ini mencatat
-pesanan, menghitung total, dan menerima pembayaran secara manual. Berdasarkan hasil
-wawancara dengan pengelola, tiga masalah utama melatarbelakangi pengembangan sistem ini:
+Warkil-Kasir adalah aplikasi POS berbasis web untuk Warung Kikil Abang. Repositori saat ini
+berisi frontend kasir/pemilik, REST API Express, dan skema PostgreSQL melalui Prisma.
+Dokumen ini menggambarkan kode yang ada, bukan seluruh rancangan awal.
 
-1. **Belum ada pembayaran non-tunai.** Pelanggan tanpa uang tunai kerap kesulitan bertransaksi.
-2. **Pencatatan manual rawan salah hitung** dan sulit direkap menjadi laporan.
-3. **Tidak ada data menu terlaris**, sehingga pemilik tidak punya dasar evaluasi menu.
+Implementasi masih berupa gabungan fitur demo dan fitur yang tersambung ke backend:
 
-Sistem yang dibangun adalah **aplikasi kasir (POS) berbasis web**, dioptimalkan untuk layar
-ponsel/tablet, dengan pembayaran **Cash** dan **QRIS** (melalui payment gateway **Midtrans**).
+- Login pemilik/kasir, pengelolaan akun kasir, shift, dan pesanan menggunakan API serta
+  database.
+- Menu, kategori, kalender, beberapa perubahan status transaksi, dan sebagian data riwayat
+  dikelola frontend di `localStorage` atau dibuat sebagai data demo.
+- Pembayaran QRIS pada UI adalah simulasi. Belum ada pemanggilan Midtrans atau webhook.
 
-## 2. Ruang Lingkup
+Karena itu, data demo yang terlihat pada laporan atau dashboard tidak selalu berasal dari
+database produksi. Lihat `3-frontend-struktur-halaman.md` dan `7-integrasi-midtrans.md`.
 
-### Termasuk dalam ruang lingkup
-- Manajemen menu & kategori
-- Transaksi kasir (pencatatan pesanan, hitung total otomatis)
-- Pembayaran Cash dan QRIS (via Midtrans)
-- Riwayat transaksi
-- Laporan penjualan (harian, bulanan, custom)
-- Statistik menu terlaris (hasil agregasi, bukan modul terpisah)
+## 2. Fitur yang Ada
 
-### Di luar ruang lingkup (disepakati eksplisit bersama mitra)
-- Manajemen stok/gudang bahan baku dapur — bahan baku tetap dikelola manual oleh dapur.
-- Akun/login untuk pelanggan — pelanggan adalah entitas eksternal yang hanya melihat menu &
-  kode QR, tidak mengakses sistem secara langsung.
-
-## 3. Aktor Sistem
-
-| Aktor | Deskripsi | Contoh hak akses |
-|---|---|---|
-| **Pemilik** | Pemilik warung, pengguna dengan `role = pemilik` | Kelola menu, kelola kategori, lihat laporan penjualan & menu terlaris, kelola akun kasir |
-| **Kasir** | Pegawai warung, pengguna dengan `role = kasir` | Buat transaksi, proses pembayaran, lihat daftar menu, lihat riwayat transaksi |
-| **Pelanggan** | Entitas eksternal, tidak memiliki akun | Melihat menu (ditunjukkan kasir), memindai kode QRIS |
-
-## 4. Ringkasan Tumpukan Teknologi (Tech Stack)
-
-| Lapisan | Teknologi | Catatan |
-|---|---|---|
-| Frontend | React (Vite) + Tailwind CSS | Web app, mobile-first |
-| State/data fetching | TanStack Query + Zustand | Dijelaskan di `3-frontend-struktur-halaman.md` |
-| Backend | Node.js + Express | REST API |
-| ORM & Database | Prisma + PostgreSQL | Rekomendasi; MySQL kompatibel bila diperlukan |
-| Autentikasi | JWT (JSON Web Token) | Role-based access: `kasir`, `pemilik` |
-| Payment Gateway | Midtrans (Core API) | Metode QRIS, dijelaskan detail di `7-integrasi-midtrans.md` |
-
-> Catatan: ERD dan wawancara mitra tidak menetapkan mesin database secara eksplisit. PostgreSQL
-> dipilih sebagai rekomendasi karena dukungan tipe data enum & relasi yang kuat, tetapi seluruh
-> skema pada dokumentasi ini kompatibel dengan MySQL dengan penyesuaian minor.
-
-## 5. Peta Proses ke Fitur
-
-Dokumentasi ini mengikuti struktur DFD Level 1–2 yang sudah disusun sebelumnya:
-
-| Proses DFD | Fitur Aplikasi | Dibahas di |
-|---|---|---|
-| 1.0 Manajemen Menu (1.1–1.4) | Kelola Menu | `3-frontend-struktur-halaman.md`, `6-backend-api.md` |
-| 1.2 Manajemen Kategori | Kelola Kategori | `3-frontend-struktur-halaman.md`, `6-backend-api.md` |
-| 2.0 Transaksi Kasir (2.1–2.3) | Buat Transaksi | `3-frontend-struktur-halaman.md`, `6-backend-api.md` |
-| 3.0 Pembayaran (3.1–3.4) | Pembayaran Cash/QRIS | `7-integrasi-midtrans.md`, `6-backend-api.md` |
-| 4.0 Laporan Penjualan (4.1–4.4) | Laporan & Menu Terlaris | `6-backend-api.md` |
-
-## 6. Daftar Dokumen
-
-| Berkas | Isi |
+| Area | Perilaku aktual |
 |---|---|
-| `0-ringkasan-proyek.md` | Dokumen ini — latar belakang, ruang lingkup, tumpukan teknologi |
-| `1-frontend-design.md` | Palet warna, tipografi, layout, prinsip UI/UX untuk pengguna lintas usia |
-| `2-frontend-dependencies.md` | Daftar pustaka/dependencies React beserta fungsinya |
-| `3-frontend-struktur-halaman.md` | Struktur folder, routing, komponen, dan alur layar |
-| `4-backend-arsitektur.md` | Arsitektur backend Node.js, lapisan kode, keamanan |
-| `5-backend-database.md` | Skema database turunan ERD (tabel, kolom, relasi, enum) |
-| `6-backend-api.md` | Spesifikasi REST API per proses DFD |
-| `7-integrasi-midtrans.md` | Alur integrasi payment gateway Midtrans untuk QRIS |
+| Akses pemilik dan kasir | Login terpisah; sesi JWT disimpan pada cookie `httpOnly` |
+| Akun kasir | Pemilik dapat membuat kasir, mengubah nama/aktivasi, dan mengganti PIN |
+| Shift | Dibuka saat kasir login dan ditutup saat logout; tanggal bisnis memakai WIB |
+| POS | Cari/filter menu, keranjang, catatan item, tipe dine-in/takeaway |
+| Pembayaran | Cash memvalidasi uang diterima; QRIS masih berupa QR mock dan tombol simulasi |
+| Pesanan | Pesanan tersimpan di database; menerima status awal `READY` |
+| Antrean/realtime | Kode transaksi dan nomor antrean dibuat backend; pesanan baru disiarkan via Socket.IO |
+| Dashboard, penjualan, kalender, performa | Sebagian besar memakai data demo, state browser, serta pesanan server yang digabungkan |
 
-## 7. Sumber Rujukan
+Pengelolaan menu/kategori melalui UI belum mempunyai endpoint backend dan belum menyimpan
+perubahannya ke tabel `Menu`/`Category`.
 
-Dokumentasi ini disusun berdasarkan tiga dokumen yang diberikan mitra/tim:
-- *Laporan Hasil Wawancara* — kebutuhan bisnis, fungsional, dan atribut data
-- *Entity Relationship Diagram (ERD)* — 7 entitas: Users, Categories, Menus, Transactions,
-  Transaction_Items, Payments, Sales_Report
-- *Data Flow Diagram (DFD) Level 0–2* — rincian aliran data tiap proses utama
+## 3. Aktor dan Hak Akses
+
+| Aktor | Akses aktual |
+|---|---|
+| Pemilik (`OWNER`) | Halaman dashboard, kalender, menu, kasir, penjualan, performa; API pengelolaan kasir dan baca pesanan |
+| Kasir (`CASHIER`) | Halaman POS, pesanan, penjualan; API membuat pesanan dan membaca pesanan hari ini |
+| Pelanggan | Tidak memiliki akun atau akses langsung ke aplikasi |
+
+RBAC backend membatasi endpoints; beberapa halaman pemilik masih menampilkan data/state sisi
+frontend, bukan data yang dikelola server.
+
+## 4. Teknologi Aktual
+
+| Lapisan | Teknologi |
+|---|---|
+| Frontend | React 18, JSX, Vite, React Router |
+| Data browser | React Context/hooks, `localStorage`, TanStack Query |
+| Realtime browser | `socket.io-client` |
+| Backend | Node.js 20+, Express 4, JavaScript ESM |
+| Validasi | Zod pada batas route |
+| Database | PostgreSQL, Prisma 6 |
+| Sesi | JWT dalam cookie `httpOnly`, `bcryptjs` |
+| Pembayaran | Cash tercatat di backend; QRIS belum terintegrasi ke payment gateway |
+
+Tidak ada TypeScript atau Tailwind di aplikasi aktual. Uang direpresentasikan sebagai integer
+rupiah pada model transaksi/pesanan yang aktif.
+
+## 5. Batasan dan Pekerjaan Belum Terimplementasi
+
+- Integrasi Midtrans (charge, notifikasi, pemeriksaan status) belum ada.
+- Menu/kategori belum dikelola lewat API/database.
+- Laporan/dashboard/performa belum sepenuhnya dihitung dari database produksi.
+- Beberapa perubahan status pesanan di UI hanya mengubah state frontend; backend belum
+  menyediakan endpoint untuk alur persiapan pesanan.
+- Perhitungan harga paket di service memakai data komponen, tetapi jalur pemuatan menu untuk
+  pembuatan order perlu memuat menu komponen juga. Verifikasi sebelum mengandalkan harga paket
+  dari API.
+- Model Prisma mencakup entitas tambahan (mis. pembayaran, kalender, pengaturan) yang belum
+  seluruhnya dihubungkan dengan fitur/API.
+
+## 6. Dokumen
+
+| Berkas | Cakupan |
+|---|---|
+| `1-frontend-design.md` | Gaya visual yang benar-benar tampak pada CSS |
+| `2-frontend-dependencies.md` | Dependencies dan scripts aktual |
+| `3-frontend-struktur-halaman.md` | Routing, state frontend, pembagian data demo/server |
+| `4-backend-arsitektur.md` | Struktur dan alur backend aktual |
+| `5-backend-database.md` | Skema Prisma aktual |
+| `6-backend-api.md` | Endpoints yang terdaftar di Express |
+| `7-integrasi-midtrans.md` | Status konfigurasi dan pekerjaan integrasi yang belum dilakukan |
+
+Sumber kebenaran untuk perilaku adalah source code, khususnya `backend/src/`,
+`backend/prisma/schema.prisma`, dan `frontend/src/`. Dokumen lama dalam
+`docs/superpowers/` merupakan artefak perencanaan bertanggal dan tidak menjadi spesifikasi
+implementasi terkini.
