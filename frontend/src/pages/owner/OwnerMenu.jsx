@@ -226,6 +226,7 @@ function MenuForm({ initial, defaultCat, menus, categories, onSave, onClose }) {
 
 function CategoryManager({ categories, menus, refreshMenus, onClose }) {
   const [name, setName] = useState('');
+  const [newIsBundle, setNewIsBundle] = useState(false);
   const [drafts, setDrafts] = useState({});
   const [error, setError] = useState('');
   const countOf = (id) => menus.filter((m) => m.cat === id).length;
@@ -255,8 +256,9 @@ function CategoryManager({ categories, menus, refreshMenus, onClose }) {
   const add = async () => {
     if (!name.trim()) return;
     try {
-      await api.post('/categories', { name: name.trim() });
+      await api.post('/categories', { name: name.trim(), isBundle: newIsBundle });
       setName('');
+      setNewIsBundle(false);
       await refreshMenus();
       setError('');
     } catch (err) {
@@ -289,6 +291,10 @@ function CategoryManager({ categories, menus, refreshMenus, onClose }) {
         ))}
         <div className="cat-row">
           <input className="input" placeholder="Nama kategori baru" value={name} onChange={(e) => setName(e.target.value)} />
+          <label className="muted sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input type="checkbox" checked={newIsBundle} onChange={(e) => setNewIsBundle(e.target.checked)} />
+            Kategori paket
+          </label>
           <button className="btn btn-primary" disabled={!name.trim()} onClick={add}>
             Tambah
           </button>

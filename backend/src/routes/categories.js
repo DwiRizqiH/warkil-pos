@@ -6,13 +6,14 @@ import { validate } from '../middleware/validate.js';
 import { createCategory, deleteCategory, updateCategory } from '../services/menus.js';
 
 const categoryBody = z.object({ name: z.string().trim().min(1).max(60) });
+const createBody = categoryBody.extend({ isBundle: z.boolean().optional() });
 const idParams = z.object({ id: z.string().min(1) });
 
 export const categoriesRouter = Router();
 
 categoriesRouter.use(requireAuth, requireRole('OWNER'));
 
-categoriesRouter.post('/', validate({ body: categoryBody }), async (req, res, next) => {
+categoriesRouter.post('/', validate({ body: createBody }), async (req, res, next) => {
   try {
     ok(res, await createCategory(req.body), 201);
   } catch (err) {

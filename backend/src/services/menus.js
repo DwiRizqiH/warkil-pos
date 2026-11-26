@@ -131,10 +131,10 @@ export async function deleteMenu(id) {
 
 const categorySelect = { id: true, name: true, isBundle: true };
 
-export async function createCategory({ name }) {
+export async function createCategory({ name, isBundle = false }) {
   const last = await prisma.category.findFirst({ orderBy: { sortOrder: 'desc' }, select: { sortOrder: true } });
   return prisma.category.create({
-    data: { name, sortOrder: (last?.sortOrder ?? -1) + 1 },
+    data: { name, isBundle, sortOrder: (last?.sortOrder ?? -1) + 1 },
     select: categorySelect,
   });
 }

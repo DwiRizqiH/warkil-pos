@@ -112,6 +112,23 @@ describe('menu pemilik', () => {
 });
 
 describe('kategori', () => {
+  it('membuat kategori paket lalu paket di dalamnya', async () => {
+    const category = await request(app)
+      .post('/api/categories')
+      .set('Cookie', ownerCookie)
+      .send({ name: 'Paket', isBundle: true });
+    expect(category.status).toBe(201);
+    expect(category.body.data.isBundle).toBe(true);
+
+    const menu = await request(app)
+      .post('/api/menus')
+      .set('Cookie', ownerCookie)
+      .send({ name: 'Paket Hemat', cat: category.body.data.id, items: [{ id: 'm1', qty: 2 }] });
+
+    expect(menu.status).toBe(201);
+    expect(menu.body.data).toMatchObject({ isBundle: true, items: [{ id: 'm1', qty: 2 }] });
+  });
+
   it('membuat, mengganti nama, dan menghapus kategori kosong', async () => {
     const created = await request(app).post('/api/categories').set('Cookie', ownerCookie).send({ name: 'Paket' });
     expect(created.status).toBe(201);

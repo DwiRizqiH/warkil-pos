@@ -89,7 +89,8 @@ prompt dan tidak ada migrasi yang dibuat di server.
 ## Data
 
 `deploy.sh` menjalankan `npm run seed` (data dasar: pemilik, kategori, menu, kasir
-demo, pengaturan) setiap kali deploy — semuanya upsert, jadi aman diulang. Kasir
+demo, pengaturan) setiap kali deploy — seed hanya membuat baris yang belum ada, jadi aman
+diulang dan tidak menimpa menu/kategori yang sudah diubah pemilik lewat aplikasi. Kasir
 demo punya PIN default `1234`; ganti sebelum dipakai sungguhan.
 
 `demo` dan `reset` sama-sama memanggil `prisma/seed-demo.js`: `demo` mengosongkan

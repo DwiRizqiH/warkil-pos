@@ -1,13 +1,15 @@
-# Catatan Revisi SKPL — Integrasi QRIS Midtrans
+# Catatan Revisi SKPL — QRIS Midtrans dan Menu Server
 
 Sumber: `docs/SKPL_non-OO_-_Warkil-Kasir_Rev-C.docx` (Revisi C, 12-11-2026).
-Catatan disusun 26-11-2026 setelah QRIS diganti dari simulasi menjadi Midtrans Core API.
+Catatan disusun 26-11-2026 setelah QRIS diganti dari simulasi menjadi Midtrans Core API dan
+menu/kategori dipindahkan dari localStorage ke database.
 
 ## 1. Riwayat Revisi
 
-- **Daftar Perubahan**: tambah baris D dengan ringkasan "Integrasi QRIS Midtrans Core API:
-  endpoint charge/status/webhook, status order UNPAID/CANCELLED, pembaruan skema Payment,
-  pengujian sandbox". Jangan ubah deskripsi Revisi C karena itu catatan historis.
+- **Daftar Perubahan**: tambah baris D dengan ringkasan "Integrasi QRIS Midtrans Core API dan
+  pemindahan menu/kategori ke database: endpoint charge/status/webhook, CRUD menu/kategori,
+  seed tidak lagi menimpa perubahan pemilik, status order UNPAID/CANCELLED, pembaruan skema
+  Payment". Jangan ubah deskripsi Revisi C karena itu catatan historis.
 - **Tabel INDEX/TGL dan Diperiksa/Disetujui**: isi tanggal D (26-11-2026); kolom pemeriksa dan
   penyetuju tetap "Perlu konfirmasi".
 - **Daftar Halaman Perubahan**: isi rentang halaman Revisi D setelah tata letak final.
@@ -146,3 +148,48 @@ Catatan disusun 26-11-2026 setelah QRIS diganti dari simulasi menjadi Midtrans C
 - Catatan kejujuran: pelunasan diuji dengan notifikasi bertanda tangan yang dibuat sendiri,
   bukan pembayaran pelanggan sungguhan melalui aplikasi e-wallet. Uji pembayaran nyata di
   simulator/dashboard sandbox sebaiknya ditambahkan sebelum status "teruji penuh".
+
+## 10. Perubahan Menu dan Kategori (server-backed)
+
+| Lokasi | Klaim Rev C | Perlu diperbarui |
+|---|---|---|
+| Lingkup Masalah | "menu … masih dikelola lokal" | Menu dan kategori memakai API serta database; kalender dan sebagian riwayat tetap lokal/demo |
+| Perspektif Produk | "sebagian tampilan menu … state localStorage" | Hapus menu dari daftar state browser; menu dimuat dari `GET /api/menus` setelah login |
+| Fungsi Produk | Memilih "menu lokal"; sumber menu seed; UI memuat salinan | Menu berasal dari database; perubahan pemilik tersimpan di database |
+| Karakteristik Pengguna (Tabel 3) | "Menu … belum bersumber penuh dari backend" | Pemilik mengelola menu/kategori melalui API; kasir membaca katalog yang sama |
+| Batasan-batasan | Endpoint hanya health/auth/cashiers/orders; CRUD menu belum ada | Tambahkan `/api/menus` dan `/api/categories`; hapus pernyataan CRUD belum ada |
+| Batasan-batasan (seed) | Deploy menimpa nama/harga menu; perubahan menu lewat seed | Seed hanya membuat menu/kategori yang belum ada; perubahan pemilik tidak ditimpa |
+| Antarmuka perangkat lunak | Daftar REST API tanpa menu | Tambahkan endpoint menu/kategori dan batas body 2 MB untuk foto data URL |
+| DFD Level 1 P5/P6 | Menu dan kategori disimpan di browser; P6 rencana | P5 hanya kalender/status/riwayat; P6 (menu/kategori) menjadi proses aktual |
+| DFD data store | Store browser mencakup menu dan kategori | Hapus menu/kategori dari store browser; API menulis Menu/Category/MenuComponent |
+| Paragraf harga paket | Harga paket via API salah (Rp 0) karena komponen tidak dimuat | Query order memuat komponen paket; harga paket dihitung benar dan diuji |
+| SKPL-F-05 | "cacat laten pada paket" | Paket tidak lagi cacat; sebutkan pengujian total paket |
+| SKPL-F-08 | CRUD menu/kategori hanya localStorage; ketersediaan tidak ada | Terimplementasi di server (tambah/ubah/hapus lunak, kategori, paket); kolom ketersediaan tetap belum ada dan perlu keputusan |
+| Kamus Data | "UI menu menyimpan salinannya di browser" | Menu/Category/MenuComponent dibaca dan ditulis lewat API |
+| Batasan Perancangan | "Menu … belum mempunyai alur produksi penuh" | Menu sudah punya alur produksi; kalender/laporan demo tetap |
+| Tabel 7 | F-08–F-10 "data lokal; CRUD server belum ada" | F-08 menjadi terimplementasi; F-09/F-10 tetap parsial/demo |
+| Tabel 8 | "Manajemen menu — Frontend/local" | Terimplementasi di server; bukti route menu dan pengujian |
+| Tabel 8 | "Menu paket — Parsial; harga paket salah" | Terimplementasi; komponen, diskon, dan harga paket diuji |
+| Tabel 9 | "Manajemen menu — Belum terpenuhi: hanya localStorage" | Terpenuhi untuk menu/kategori/harga/paket; ketersediaan menu masih perlu keputusan skema |
+| Tabel 10 | `Menus.is_available` tidak ada | Tetap tidak ada; bedakan dari CRUD yang sudah berjalan |
+
+Rekomendasi tambahan:
+
+1. **Ketersediaan menu**: UI lama menyebut status ketersediaan, tetapi skema hanya punya
+   `deletedAt`. Putuskan apakah "habis" cukup lewat hapus lunak atau perlu kolom
+   `isAvailable`/stok harian sebelum F-08 dinyatakan penuh.
+2. **Sinkronisasi kasir terbuka**: kasir melihat perubahan menu setelah reload/login, belum ada
+   event realtime menu. Tambahkan kebutuhan/event bila perubahan harus langsung terlihat.
+3. **Foto menu**: sekarang tersimpan sebagai data URL di database (maks. body 2 MB). Tetapkan
+   batas ukuran, kompresi, dan kebijakan retensi bila foto banyak.
+4. **Seed**: dokumen deploy dan SKPL harus menyebut seed bersifat insert-only untuk menu agar
+   deploy tidak dianggap menimpa data pemilik.
+
+## 11. Bukti Uji Menu (dapat dicantumkan)
+
+- `GET /api/menus` mengembalikan kategori dan menu; tanpa sesi 401, kasir boleh membaca.
+- Pemilik membuat/mengubah/menghapus menu; kasir ditolak 403; hapus bersifat lunak.
+- Kategori dapat dibuat (termasuk kategori paket), diganti nama, dan dihapus hanya bila kosong.
+- Paket disimpan dengan komponen dan diskon; order paket menghasilkan total diskon yang benar.
+- Perubahan harga lewat UI pemilik tersimpan ke database dan terbaca lagi setelah refresh.
+- Seed dijalankan ulang tidak menimpa nama/harga/kategori yang sudah diubah pemilik.
