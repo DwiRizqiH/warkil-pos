@@ -20,6 +20,8 @@ const notificationBody = z.object({
 
 export const paymentsRouter = Router();
 
+const TEST_ORDER_PREFIX = 'payment_notif_test_';
+
 // Midtrans calls this without a session; the SHA-512 signature is the authentication.
 paymentsRouter.post(
   '/midtrans/notification',
@@ -27,6 +29,12 @@ paymentsRouter.post(
   async (req, res, next) => {
     try {
       if (!verifySignature(req.body)) throw forbidden('Signature tidak valid');
+      // The dashboard's test notification uses a synthetic order id; acknowledge it without
+      // touching the database so the configuration page reports success.
+      if (req.body.order_id.startsWith(TEST_ORDER_PREFIX)) {
+        ok(res, { received: true });
+        return;
+      }
       await applyMidtransStatus(req.body);
       ok(res, { received: true });
     } catch (err) {

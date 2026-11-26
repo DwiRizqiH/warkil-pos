@@ -113,6 +113,25 @@ describe('POST /api/payments/midtrans/notification', () => {
     expect(await prisma.payment.findFirstOrThrow()).toMatchObject({ status: 'PENDING' });
   });
 
+  it('membalas 200 untuk notifikasi uji dashboard tanpa menyentuh database', async () => {
+    const payload = {
+      order_id: 'payment_notif_test_M506335092_abc',
+      status_code: '200',
+      gross_amount: '105000.00',
+      transaction_id: 'test-transaction',
+      transaction_status: 'settlement',
+      payment_type: 'gopay',
+      fraud_status: 'accept',
+    };
+    const res = await request(app)
+      .post('/api/payments/midtrans/notification')
+      .send({ ...payload, signature_key: sign(payload) });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ received: true });
+    expect(await prisma.payment.count()).toBe(0);
+  });
+
   it('menolak signature yang tidak cocok', async () => {
     const order = await createQrisOrder();
     const res = await request(app)
