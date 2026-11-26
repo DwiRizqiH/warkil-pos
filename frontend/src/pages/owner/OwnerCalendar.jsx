@@ -19,7 +19,7 @@ function LiveClock() {
 }
 
 export default function OwnerCalendar() {
-  const { now, getMark, setMarks, sundayOff, setSundayOff } = useStore();
+  const { now, index, getMark, setMarks, sundayOff, setSundayOff } = useStore();
   const today = ymd(now);
   const [cursor, setCursor] = useState(() => new Date(now.getFullYear(), now.getMonth(), 1));
   const [selected, setSelected] = useState(today);
@@ -68,11 +68,13 @@ export default function OwnerCalendar() {
             onSelect={pick}
             getMark={getMark}
             todayStr={today}
+            salesByDate={index.daily}
           />
           <div className="legend">
             <span><i className="dot red" /> Libur</span>
             <span><i className="dot dark" /> Event</span>
             <span><i className="dot ring" /> Hari ini</span>
+            <span className="muted">Angka kecil = penjualan hari itu</span>
           </div>
         </div>
 

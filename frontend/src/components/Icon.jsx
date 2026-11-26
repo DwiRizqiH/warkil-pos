@@ -5,6 +5,8 @@ const P = {
   trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',
   search: 'M11 4a7 7 0 100 14 7 7 0 000-14zM21 21l-4.5-4.5',
   back: 'M15 5l-7 7 7 7',
+  upload: 'M12 16V4M7 9l5-5 5 5M4 20h16',
+  download: 'M12 4v12M7 11l5 5 5-5M4 20h16',
   edit: 'M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4',
   chev: 'M9 5l7 7-7 7',
   print: 'M7 9V4h10v5M7 17H5a1 1 0 01-1-1v-5a2 2 0 012-2h12a2 2 0 012 2v5a1 1 0 01-1 1h-2M7 14h10v6H7z',

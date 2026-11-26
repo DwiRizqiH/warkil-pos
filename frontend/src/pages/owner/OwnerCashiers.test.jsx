@@ -44,8 +44,7 @@ test('owner can add, rename, deactivate, and change a cashier PIN', async () => 
   fireEvent.click(screen.getByRole('button', { name: 'Simpan' }));
   expect(await screen.findByText('Budi Santoso')).toBeTruthy();
 
-  const sitiCard = () => screen.getByRole('heading', { name: /siti rahma/i }).closest('section');
-  fireEvent.click(within(sitiCard()).getByRole('button', { name: 'Ubah nama' }));
+  fireEvent.click(screen.getAllByRole('button', { name: 'Ubah nama' })[0]);
   fireEvent.change(screen.getByLabelText('Nama kasir'), { target: { value: 'Siti Rahmawati' } });
   fireEvent.click(screen.getByRole('button', { name: 'Simpan' }));
   expect(await screen.findByText('Siti Rahmawati')).toBeTruthy();

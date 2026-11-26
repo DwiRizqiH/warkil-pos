@@ -35,6 +35,33 @@ describe('csp', () => {
   });
 });
 
+describe('cors webhook', () => {
+  const dashboard = 'https://dashboard.sandbox.midtrans.com';
+
+  it('menjawab preflight dashboard Midtrans pada endpoint notifikasi', async () => {
+    const res = await request(app)
+      .options('/api/payments/midtrans/notification')
+      .set('Origin', dashboard)
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'content-type');
+
+    expect(res.status).toBe(204);
+    expect(res.headers['access-control-allow-origin']).toBe(dashboard);
+    expect(res.headers['access-control-allow-credentials']).toBeUndefined();
+  });
+
+  it('membalas POST dashboard dengan CORS tanpa kredensial', async () => {
+    const res = await request(app).post('/api/payments/midtrans/notification').set('Origin', dashboard).send({});
+    expect(res.headers['access-control-allow-origin']).toBe(dashboard);
+    expect(res.headers['access-control-allow-credentials']).toBeUndefined();
+  });
+
+  it('tidak membuka origin dashboard untuk route API lain', async () => {
+    const res = await request(app).get('/api/health').set('Origin', dashboard);
+    expect(res.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+  });
+});
+
 describe('api', () => {
   it('membalas health check', async () => {
     const res = await request(app).get('/api/health');

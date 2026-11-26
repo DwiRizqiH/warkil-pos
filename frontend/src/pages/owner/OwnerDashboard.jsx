@@ -14,6 +14,8 @@ export default function OwnerDashboard() {
   const month = rangeSum(index, monthFrom, today);
   const weekStart = startOfWeek(now);
   const week = rangeSum(index, ymd(weekStart), today);
+  const todaySum = rangeSum(index, today, today);
+  const averageSale = todaySum.count > 0 ? Math.round(todaySum.total / todaySum.count) : 0;
   const shifts = getShifts(index, today, { now });
   const weekLabel = `${weekStart.getDate()} ${MONTHS_ID[weekStart.getMonth()].slice(0, 3)} – ${addDays(weekStart, 6).getDate()} ${MONTHS_ID[addDays(weekStart, 6).getMonth()].slice(0, 3)}`;
 
@@ -21,7 +23,7 @@ export default function OwnerDashboard() {
     <div className="stack-lg">
       <div className="spread wrap">
         <div>
-          <h1 className="h1">Halo, Pemilik 👋</h1>
+          <h1 className="h1">Halo, Pemilik</h1>
           <p className="muted">{fmtDateLong(today)}</p>
         </div>
         <span className="live-pill">
@@ -52,6 +54,22 @@ export default function OwnerDashboard() {
             {shifts.map((s) => (
               <ShiftCard key={s.idx} shift={s} onClick={() => nav(`/pemilik/performa?date=${today}&shift=${s.idx}`)} />
             ))}
+            {shifts.length === 1 && (
+              <div className="card card-pad recap">
+                <div className="spread">
+                  <h3>Rata-rata transaksi hari ini</h3>
+                  <span className="badge mute">Sampai sekarang</span>
+                </div>
+                <div className="recap-big">{rupiah(averageSale)}</div>
+                <div className="recap-row">
+                  <span><b>{todaySum.qty.toLocaleString('id-ID')}</b> menu terjual</span>
+                  <span><b>{todaySum.count.toLocaleString('id-ID')}</b> transaksi</span>
+                </div>
+                <Link to={`/pemilik/performa?date=${today}`} className="link-row">
+                  Lihat performa kasir <Icon name="chev" size={16} />
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </section>

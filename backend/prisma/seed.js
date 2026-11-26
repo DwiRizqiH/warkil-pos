@@ -29,7 +29,8 @@ export async function seedBase(client = prisma) {
     const data = { name: category.name, sortOrder: index, isBundle: bundleCategoryIds.has(category.id) };
     const row = await client.category.upsert({
       where: { id: category.id },
-      update: data,
+      // Owner edits are now stored in the database; deploy must not reset them.
+      update: {},
       create: { id: category.id, ...data },
     });
     categoryIds.push(row.id);
@@ -48,32 +49,37 @@ export async function seedBase(client = prisma) {
 
   // Plain menus first so a bundle's components always resolve.
   for (const menu of MENU_SEED.filter((item) => !bundleCategoryIds.has(item.cat))) {
-    const data = {
-      name: menu.name,
-      categoryId: menu.cat,
-      price: menu.price,
-      emoji: menu.emoji,
-      imageUrl: menu.image ?? null,
-      discountPercent: null,
-      deletedAt: null,
-    };
-    await client.menu.upsert({ where: { id: menu.id }, update: data, create: { id: menu.id, ...data } });
+    const exists = await client.menu.findUnique({ where: { id: menu.id }, select: { id: true } });
+    if (exists) continue;
+    await client.menu.create({
+      data: {
+        id: menu.id,
+        name: menu.name,
+        categoryId: menu.cat,
+        price: menu.price,
+        emoji: menu.emoji,
+        imageUrl: menu.image ?? null,
+        discountPercent: null,
+      },
+    });
   }
 
   for (const menu of MENU_SEED.filter((item) => bundleCategoryIds.has(item.cat))) {
-    const data = {
-      name: menu.name,
-      categoryId: menu.cat,
-      price: null,
-      emoji: menu.emoji,
-      imageUrl: menu.image ?? null,
-      discountPercent: menu.discountPercent ?? 0,
-      deletedAt: null,
-    };
-    await client.menu.upsert({ where: { id: menu.id }, update: data, create: { id: menu.id, ...data } });
-    await client.menuComponent.deleteMany({ where: { bundleId: menu.id } });
-    await client.menuComponent.createMany({
-      data: menu.items.map((component) => ({ bundleId: menu.id, componentId: component.id, qty: component.qty })),
+    const exists = await client.menu.findUnique({ where: { id: menu.id }, select: { id: true } });
+    if (exists) continue;
+    await client.menu.create({
+      data: {
+        id: menu.id,
+        name: menu.name,
+        categoryId: menu.cat,
+        price: null,
+        emoji: menu.emoji,
+        imageUrl: menu.image ?? null,
+        discountPercent: menu.discountPercent ?? 0,
+        components: {
+          create: menu.items.map((component) => ({ componentId: component.id, qty: component.qty })),
+        },
+      },
     });
   }
 

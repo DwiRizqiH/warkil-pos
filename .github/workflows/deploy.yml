@@ -1,7 +1,10 @@
 name: CI & Deploy
 
 on:
-  # Push tidak menjalankan apa pun; deploy (dan tesnya) dipilih dari tab Actions.
+  # Push ke main selalu deploy dengan mode production: menu di-upsert, data penjualan tetap.
+  # Mode demo/reset yang menghapus pesanan hanya bisa dipilih manual dari tab Actions.
+  push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -85,7 +88,7 @@ jobs:
           esac
 
       - name: Upload source + build ke server
-        if: github.event_name == 'workflow_dispatch'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.SSH_HOST || '155.94.164.159' }}
@@ -96,11 +99,11 @@ jobs:
           overwrite: true
 
       - name: Install backend deps, migrate, restart PM2
-        if: github.event_name == 'workflow_dispatch'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
         env:
-          MODE: ${{ inputs.mode }}
-          WIPE_CONFIRMED: ${{ (inputs.mode == 'demo' || inputs.mode == 'reset') && 'wipe' || '' }}
+          MODE: ${{ github.event.inputs.mode || 'production' }}
+          WIPE_CONFIRMED: ${{ (github.event.inputs.mode == 'demo' || github.event.inputs.mode == 'reset') && 'wipe' || '' }}
         with:
           host: ${{ secrets.SSH_HOST || '155.94.164.159' }}
           username: ${{ secrets.SSH_USER || 'dwi' }}

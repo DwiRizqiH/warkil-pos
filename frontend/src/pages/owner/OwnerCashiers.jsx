@@ -147,7 +147,7 @@ export default function OwnerCashiers() {
         <div className="stack">
           {cashiers.map((cashier) => (
             <section className="card card-pad spread wrap" key={cashier.id}>
-              <div className="stack" style={{ gap: 6 }}>
+              <div className="stack">
                 <div className="row">
                   <h2 className="section-title">{cashier.name}</h2>
                   <span className={'badge ' + (cashier.isActive ? 'ok' : 'mute')}>{cashier.isActive ? 'Aktif' : 'Nonaktif'}</span>

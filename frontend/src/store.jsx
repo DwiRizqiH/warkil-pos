@@ -1,9 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { DEFAULT_CATEGORIES, DEFAULT_MENUS, generateHistory, scheduledCashier } from './data.js';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { api } from './api/client.js';
+import { useAuth } from './auth/AuthContext.jsx';
+import { DEFAULT_MENUS, generateHistory } from './data.js';
 import { bestSellers, buildIndex } from './selectors.js';
-import { daysBetween, pad, parseYmd, shiftIndexOf, useNow, ymd } from './utils.js';
+import { daysBetween, parseYmd, useNow, ymd } from './utils.js';
 
-const PREFIX = 'kikil:v2:';
+const PREFIX = 'kikil:v4:';
 const Ctx = createContext(null);
 export const useStore = () => useContext(Ctx);
 
@@ -51,20 +53,45 @@ function usePersist(key, init) {
 const BASE = generateHistory(DEFAULT_MENUS, new Date());
 
 export function StoreProvider({ children }) {
-  const [menus, setMenus] = usePersist('menus', DEFAULT_MENUS);
-  const [categories, setCategories] = usePersist('cats', DEFAULT_CATEGORIES);
+  const { user } = useAuth();
+  // Menus and categories live in the database; the browser only keeps personal UI state.
+  const [menus, setMenus] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [menusLoading, setMenusLoading] = useState(true);
   const [marks, setMarks] = usePersist('marks', {});
   const [sundayOff, setSundayOff] = usePersist('sundayOff', false);
-  const [extra, setExtra] = usePersist('extraTx', []);
   const [overrides, setOverrides] = usePersist('overrides', {});
+  const [serverTx, setServerTx] = useState([]);
   const now = useNow(15000);
   const todayStr = ymd(now);
+
+  const refreshMenus = useCallback(async () => {
+    const data = await api.get('/menus');
+    setMenus(data.menus);
+    setCategories(data.categories);
+    setMenusLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setMenus([]);
+      setCategories([]);
+      setMenusLoading(false);
+      return;
+    }
+    refreshMenus().catch(() => setMenusLoading(false));
+  }, [user, refreshMenus]);
 
   const baseApplied = useMemo(
     () => BASE.map((t) => (overrides[t.id] ? { ...t, ...overrides[t.id] } : t)),
     [overrides]
   );
-  const allTx = useMemo(() => baseApplied.concat(extra), [baseApplied, extra]);
+  // Server orders replace the demo row with the same code, so today's queue never appears twice.
+  const allTx = useMemo(() => {
+    const byId = new Map(baseApplied.map((t) => [t.id, t]));
+    for (const t of serverTx) byId.set(t.id, t);
+    return [...byId.values()];
+  }, [baseApplied, serverTx]);
   const index = useMemo(() => buildIndex(allTx), [allTx]);
   const menusById = useMemo(() => new Map(menus.map((m) => [m.id, m])), [menus]);
 
@@ -75,59 +102,23 @@ export function StoreProvider({ children }) {
     [hasMonthData, index, todayStr, menusById] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const txRef = useRef(allTx);
-  txRef.current = allTx;
-  const extraRef = useRef(extra);
-  extraRef.current = extra;
-
-  const nextSeq = () => {
-    const today = ymd(new Date());
-    const nums = txRef.current
-      .filter((t) => t.date === today)
-      .map((t) => parseInt(t.id.split('-')[2], 10));
-    return Math.max(0, ...nums) + 1;
-  };
-
-  // Nomor antrian: 001, 002, ... (reset tiap hari)
-  const nextQueue = () => {
-    const today = ymd(new Date());
-    const nums = txRef.current
-      .filter((t) => t.date === today)
-      .map((t) => parseInt(String(t.queue).replace(/\D/g, ''), 10));
-    return pad(Math.max(0, ...nums) + 1, 3);
-  };
-
-  const createOrder = useCallback((o) => {
-    const d = new Date();
-    const date = ymd(d);
-    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    const cashier =
-      o.cashier || scheduledCashier(date, shiftIndexOf(time));
-    const tx = {
-      note: '',
-      orderType: 'dine',
-      ...o,
-      id: `TRX-${date.replace(/-/g, '')}-${pad(nextSeq(), 4)}`,
-      date,
-      time,
-      cashier,
-      createdAt: d.getTime(),
-      queue: nextQueue(),
-      total: o.items.reduce((sum, i) => sum + i.price * i.qty, 0),
-    };
-    setExtra((prev) => [...prev, tx]);
-    return tx;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const mergeServerOrders = useCallback((rows) => {
+    setServerTx((prev) => {
+      const byId = new Map(prev.map((t) => [t.id, t]));
+      for (const t of rows) byId.set(t.id, { ...byId.get(t.id), ...t });
+      return [...byId.values()];
+    });
+  }, []);
 
   const updateTx = useCallback(
     (id, patch) => {
-      if (extraRef.current.some((t) => t.id === id)) {
-        setExtra((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-      } else {
-        setOverrides((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+      if (serverTx.some((t) => t.id === id)) {
+        setServerTx((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+        return;
       }
+      setOverrides((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
     },
-    [setExtra, setOverrides]
+    [serverTx, setOverrides]
   );
 
   const getMark = useCallback(
@@ -138,13 +129,15 @@ export function StoreProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      menus, setMenus, categories, setCategories, marks, setMarks, sundayOff, setSundayOff,
-      getMark, allTx, index, now, createOrder, updateTx,
+      menus, categories, menusLoading, refreshMenus,
+      marks, setMarks, sundayOff, setSundayOff,
+      getMark, allTx, index, now, mergeServerOrders, updateTx,
       best, hasMonthData, dataDays,
     }),
     [
-      menus, setMenus, categories, setCategories, marks, setMarks, sundayOff, setSundayOff,
-      getMark, allTx, index, now, createOrder, updateTx, best, hasMonthData, dataDays,
+      menus, categories, menusLoading, refreshMenus,
+      marks, setMarks, sundayOff, setSundayOff,
+      getMark, allTx, index, now, mergeServerOrders, updateTx, best, hasMonthData, dataDays,
     ]
   );
 

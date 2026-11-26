@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
+import BrandMark from '../../components/BrandMark.jsx';
 
 export default function CashierLogin() {
   const { user, loginCashier } = useAuth();
@@ -35,7 +36,7 @@ export default function CashierLogin() {
   return (
     <div className="login-wrap">
       <form className="login-card" onSubmit={submit}>
-        <div className="brand-mark lg">K</div>
+        <BrandMark size="lg" />
         <h1>Login Kasir</h1>
         <p className="muted">Masuk di awal shift. Jangan lupa log out saat shift selesai.</p>
 

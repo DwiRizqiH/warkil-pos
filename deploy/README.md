@@ -6,10 +6,10 @@ Nginx `testwarkil.remcp.com` (port 80) mem-proxy ke port tersebut.
 
 ## Deploy
 
-`.github/workflows/deploy.yml` tidak jalan sendiri: push ke `main` tidak
-menjalankan apa pun, pull request hanya build + tes. Deploy (beserta tesnya)
-dipilih manual dari GitHub → Actions → **CI & Deploy** → *Run workflow*, dengan
-input:
+Push ke `main` otomatis build, tes, lalu deploy mode `production` — data
+penjualan tidak dihapus. Pull request hanya build + tes. Mode yang menghapus
+data dipilih manual dari GitHub → Actions → **CI & Deploy** → *Run workflow*,
+dengan input:
 
 | Mode | Yang terjadi di server |
 | --- | --- |
@@ -17,8 +17,9 @@ input:
 | `demo` | sama, lalu **semua pesanan, pembayaran, dan shift dihapus** dan diganti riwayat demo 120 hari. |
 | `reset` | sama, lalu **semua pesanan, pembayaran, dan shift dihapus** dan dibiarkan kosong — untuk mulai jualan sungguhan dari nol. |
 
-Deploy juga hanya jalan dari `main`: dispatch dari branch lain berhenti sebelum
-upload, supaya kode yang belum di-merge tidak mendarat di server.
+Deploy juga hanya jalan dari `main`: push ke branch lain tidak deploy, dan
+dispatch dari branch lain berhenti sebelum upload, supaya kode yang belum
+di-merge tidak mendarat di server.
 
 Mode `demo` dan `reset` menuntut input `confirm` diisi `wipe`; tanpa itu workflow
 berhenti sebelum menyentuh server. Keduanya juga menulis peringatan di ringkasan
@@ -88,7 +89,8 @@ prompt dan tidak ada migrasi yang dibuat di server.
 ## Data
 
 `deploy.sh` menjalankan `npm run seed` (data dasar: pemilik, kategori, menu, kasir
-demo, pengaturan) setiap kali deploy — semuanya upsert, jadi aman diulang. Kasir
+demo, pengaturan) setiap kali deploy — seed hanya membuat baris yang belum ada, jadi aman
+diulang dan tidak menimpa menu/kategori yang sudah diubah pemilik lewat aplikasi. Kasir
 demo punya PIN default `1234`; ganti sebelum dipakai sungguhan.
 
 `demo` dan `reset` sama-sama memanggil `prisma/seed-demo.js`: `demo` mengosongkan

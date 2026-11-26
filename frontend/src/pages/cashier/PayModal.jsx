@@ -1,39 +1,112 @@
-import { useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import Modal from '../../components/Modal.jsx';
 import Icon from '../../components/Icon.jsx';
 import { ReceiptModal } from '../../components/Receipt.jsx';
-import { useStore } from '../../store.jsx';
-import { useAuth } from '../../auth/AuthContext.jsx';
 import { useCart } from '../../context/CartContext.jsx';
+import { api } from '../../api/client.js';
 import { rupiah } from '../../utils.js';
 
+const POLL_MS = 3000;
+
+const linesOf = (cart) => cart.lines.map(({ id, qty, note }) => ({ productId: id, qty, note }));
+
 export default function PayModal({ onClose, onDone }) {
-  const { createOrder } = useStore();
-  const { user } = useAuth();
   const cart = useCart();
   const [step, setStep] = useState('choose'); // choose | cash | qris | done
   const [received, setReceived] = useState('');
   const [tx, setTx] = useState(null);
+  const [qr, setQr] = useState(null);
+  const [orderCode, setOrderCode] = useState('');
   const [receipt, setReceipt] = useState(false);
-  const ref = useRef(`KKA${Date.now().toString().slice(-6)}`);
+  const [posting, setPosting] = useState(false);
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const total = cart.total;
+  const rec = Number(received) || 0;
 
-  const finalize = (payment) => {
-    const t = createOrder({
-      orderType: cart.orderType,
-      payment,
-      // Sudah dibayar berarti pesanan siap: kasir tidak perlu menandainya lagi dari papan pesanan.
-      status: 'siap',
-      cashier: user?.name,
-      items: cart.lines.map(({ id, name, qty, price, note }) => ({ id, name, qty, price, note })),
-    });
-    setTx(t);
-    setStep('done');
+  const copyQrImageUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(qr.imageUrl);
+      setCopied(true);
+    } catch {
+      setError('Browser menolak akses clipboard.');
+    }
   };
 
-  const rec = Number(received) || 0;
+  const finalizeCash = async () => {
+    setPosting(true);
+    setError('');
+    try {
+      // Money, queue and code are assigned by the server; the receipt shows what was stored.
+      setTx(await api.post('/orders', {
+        orderType: cart.orderType,
+        payment: 'Cash',
+        receivedAmount: rec,
+        items: linesOf(cart),
+      }));
+      setStep('done');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const startQris = async () => {
+    setStep('qris');
+    setPosting(true);
+    setError('');
+    try {
+      const order = await api.post('/orders', { orderType: cart.orderType, payment: 'QRIS', items: linesOf(cart) });
+      setQr(order.qr);
+      setCopied(false);
+      setOrderCode(order.id);
+    } catch (err) {
+      setError(err.message);
+      setStep('choose');
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  // Local sandbox cannot receive Midtrans' webhook, so the cashier's screen asks the server to
+  // check the gateway status until the payment settles or expires.
+  useEffect(() => {
+    if (step !== 'qris' || !orderCode) return undefined;
+    let timer;
+    let stopped = false;
+
+    const poll = async () => {
+      try {
+        const result = await api.get(`/orders/${orderCode}/payment`);
+        if (stopped) return;
+        if (result.status === 'PAID') {
+          setTx(result.tx);
+          setStep('done');
+          return;
+        }
+        if (result.status !== 'PENDING') {
+          setError(result.status === 'EXPIRED' ? 'QR sudah kedaluwarsa. Buat pembayaran baru.' : 'Pembayaran QRIS gagal.');
+          setQr(null);
+          setOrderCode('');
+          setStep('choose');
+          return;
+        }
+      } catch {
+        // A network or gateway hiccup is not final; keep the cashier waiting.
+      }
+      timer = setTimeout(poll, POLL_MS);
+    };
+
+    timer = setTimeout(poll, 1000);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [step, orderCode]);
+
   const quick = [...new Set([total, Math.ceil(total / 50000) * 50000, Math.ceil(total / 100000) * 100000, 200000])]
     .filter((v) => v >= total)
     .slice(0, 4);
@@ -50,6 +123,8 @@ export default function PayModal({ onClose, onDone }) {
           </div>
         )}
 
+        {error && <p className="form-error" role="alert">{error}</p>}
+
         {step === 'choose' && (
           <div className="pay-choices">
             <button className="pay-choice" onClick={() => setStep('cash')}>
@@ -57,7 +132,7 @@ export default function PayModal({ onClose, onDone }) {
               <b>Cash</b>
               <small>Terima uang tunai</small>
             </button>
-            <button className="pay-choice" onClick={() => setStep('qris')}>
+            <button className="pay-choice" onClick={startQris} disabled={posting}>
               <Icon name="qr" size={30} />
               <b>QR Warung Kikil</b>
               <small>QRIS sesuai total nota</small>
@@ -89,8 +164,8 @@ export default function PayModal({ onClose, onDone }) {
             </div>
             <div className="row end">
               <button className="btn btn-ghost" onClick={() => setStep('choose')}>Kembali</button>
-              <button className="btn btn-primary btn-lg" disabled={rec < total} onClick={() => finalize('Cash')}>
-                Konfirmasi pembayaran
+              <button className="btn btn-primary btn-lg" disabled={rec < total || posting} onClick={finalizeCash}>
+                {posting ? 'Menyimpan…' : 'Konfirmasi pembayaran'}
               </button>
             </div>
           </div>
@@ -98,16 +173,26 @@ export default function PayModal({ onClose, onDone }) {
 
         {step === 'qris' && (
           <div className="stack center">
-            <div className="qr-box">
-              <QRCodeSVG value={`QRIS-MOCK|WARUNG-KIKIL-ABANG|${total}|${ref.current}`} size={210} level="M" />
-            </div>
-            <p className="muted sm">QR contoh untuk mockup. Pelanggan memindai dengan aplikasi e-wallet / m-banking.</p>
-            <div className="waiting"><i /> Menunggu pembayaran…</div>
+            {!qr && <div className="waiting"><i /> Membuat QR pembayaran…</div>}
+            {qr && (
+              <>
+                <div className="qr-box">
+                  <QRCodeSVG value={qr.string} size={210} level="M" />
+                </div>
+                <p className="muted sm">
+                  Pindai dengan aplikasi e-wallet atau m-banking. QR berlaku sampai{' '}
+                  {new Date(qr.expiresAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}.
+                </p>
+                <div className="waiting"><i /> Menunggu pembayaran…</div>
+              </>
+            )}
             <div className="row end">
-              <button className="btn btn-ghost" onClick={() => setStep('choose')}>Kembali</button>
-              <button className="btn btn-dark" onClick={() => finalize('QRIS')}>
-                Simulasikan: pembayaran diterima
-              </button>
+              {qr?.imageUrl && (
+                <button className="btn btn-ghost" onClick={copyQrImageUrl}>
+                  {copied ? 'URL tersalin' : 'Salin URL gambar QR'}
+                </button>
+              )}
+              <button className="btn btn-ghost" onClick={onClose} disabled={posting}>Tutup</button>
             </div>
           </div>
         )}

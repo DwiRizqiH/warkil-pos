@@ -1,181 +1,81 @@
-# Integrasi Midtrans — Pembayaran QRIS
+# Midtrans — QRIS Core API
 
-## 1. Mengapa Core API, Bukan Snap
+## 1. Alur yang Dipakai
 
-Midtrans menyediakan dua cara integrasi utama:
+Pembayaran QRIS memakai **Core API QRIS** (`POST /v2/charge`, `payment_type: "qris"`), bukan
+Snap. Alasannya: kasir menampilkan QR di layar sendiri, sementara Snap mengarahkan pelanggan ke
+halaman pembayaran terpisah.
 
-| Pendekatan | Cara kerja | Cocok untuk kasus ini? |
-|---|---|---|
-| **Snap** | Membuka halaman/popup pembayaran milik Midtrans, pelanggan memilih sendiri metode | Kurang cocok — alur yang diminta mitra adalah kasir memilih QRIS lalu **kode QR tampil langsung di layar kasir**, bukan berpindah ke halaman lain |
-| **Core API** | Backend memanggil endpoint *charge* langsung dengan `payment_type: "qris"`, menerima string/gambar QR untuk ditampilkan sendiri di UI aplikasi | **Dipilih** — sesuai DFD 3.3 "Sistem membangkitkan dan menampilkan kode QR sesuai nominal transaksi ... lalu memeriksa status pembayaran hingga dinyatakan berhasil" |
+Alur lengkap:
 
-## 2. Kredensial & Environment
+1. Kasir memilih QRIS di modal pembayaran.
+2. `POST /api/orders` menyimpan order berstatus `UNPAID` dan payment `PENDING`, lalu meminta
+   charge ke Midtrans dengan `midtransOrderId` `{kodeOrder}-{attemptNo}`.
+3. Respons order membawa `qr.string` (payload QRIS), `qr.imageUrl` (URL PNG dari Midtrans untuk
+   simulator), dan `qr.expiresAt`. Frontend merender QR dengan `qrcode.react` dan menyediakan
+   tombol salin URL gambar.
+4. Pembayaran lunas terdeteksi dari dua jalur:
+   - webhook `POST /api/payments/midtrans/notification` (produksi);
+   - polling `GET /api/orders/:code/payment` (dipakai frontend, wajib untuk development lokal
+     yang tidak punya URL publik).
+5. Saat `settlement`/`capture`, payment menjadi `PAID`, order menjadi `READY`, `paidAt` diisi,
+   dan order disiarkan ke layar dapur. `expire`/`cancel`/`deny`/`failure` membatalkan order.
 
-| Variabel (backend) | Contoh | Keterangan |
-|---|---|---|
-| `MIDTRANS_SERVER_KEY` | `SB-Mid-server-xxxxxxx` | **Rahasia**, hanya di backend |
-| `MIDTRANS_CLIENT_KEY` | `SB-Mid-client-xxxxxxx` | Boleh publik, dipakai bila suatu saat memakai Snap |
-| `MIDTRANS_IS_PRODUCTION` | `false` (sandbox) / `true` (produksi) | Menentukan base URL API |
+## 2. Endpoint
 
-Base URL Core API:
-- Sandbox: `https://api.sandbox.midtrans.com/v2/charge`
-- Produksi: `https://api.midtrans.com/v2/charge`
+| Method | Path | Akses | Keterangan |
+|---|---|---|---|
+| POST | `/api/orders` | `CASHIER` | `payment: "QRIS"` membuat charge Midtrans dan mengembalikan `qr` |
+| GET | `/api/orders/:code/payment` | Sesi aktif | Menanyakan status ke Midtrans lalu menyinkronkan database |
+| POST | `/api/payments/midtrans/notification` | Publik, signature wajib | Webhook Midtrans |
 
-## 3. Alur Pembayaran QRIS End-to-End
+`GET /api/orders/:code/payment` mengembalikan `{ status, tx }`. `tx` berisi transaksi bila
+statusnya `PAID`; status lain hanya mengembalikan `status`, dan frontend berhenti menunggu saat
+mendapat `EXPIRED`, `FAILED`, atau `CANCELLED`.
 
-```
-Kasir pilih "QRIS" di layar Pembayaran
-        │
-        ▼
-Frontend → POST /api/payments/qris { transactionId }
-        │
-        ▼
-Backend:
-  1. Ambil total_price dari tabel transactions (bukan dari frontend)
-  2. Buat record `payments` (status = pending, method = qris)
-  3. Panggil Midtrans Core API Charge dengan payment_type "qris"
-        │
-        ▼
-Midtrans membalas dengan `qr_code` (string/URL gambar QR) & `transaction_id` Midtrans
-        │
-        ▼
-Backend simpan `qris_reference_number` = transaction_id Midtrans, kembalikan qr_code ke frontend
-        │
-        ▼
-Frontend tampilkan QR besar di layar (QRDisplay) → pelanggan scan dari e-wallet/mobile banking
-        │
-        ▼
-Pelanggan menyelesaikan pembayaran di aplikasinya
-        │
-        ▼
-Midtrans mengirim HTTP POST ke webhook backend: POST /api/payments/midtrans/callback
-        │
-        ▼
-Backend verifikasi signature_key → update payments.status & transactions.payment_status = "lunas"
-        │
-        ▼
-Frontend (polling GET /payments/:id/status tiap ±3 detik) mendeteksi status "lunas"
-        │
-        ▼
-Layar otomatis pindah ke Struk — tanpa aksi tambahan dari kasir
-```
+Dashboard Midtrans menguji URL notifikasi dari browser saat konfigurasi disimpan. Route webhook
+karena itu mengizinkan origin dashboard (`dashboard.midtrans.com` dan
+`dashboard.sandbox.midtrans.com`) pada CORS tanpa kredensial. Notifikasi sebenarnya tetap
+server-to-server dan tidak memakai CORS.
 
-## 4. Pembayaran Cash (Tanpa Midtrans)
+## 3. Verifikasi dan Idempotensi
 
-Metode `cash` **tidak melibatkan Midtrans sama sekali**. Backend langsung mencatat
-`amount_paid`, menghitung kembalian (`amount_paid - total_price`), dan menandai
-`payment_status = lunas` seketika, sesuai DFD 3.2 "Sistem menerima nominal uang yang
-dibayarkan pelanggan dan menghitung kembalian".
+- Webhook diverifikasi dengan `SHA512(order_id + status_code + gross_amount + server key)`
+  memakai `timingSafeEqual`. Signature salah ditolak HTTP 403.
+- Jumlah `gross_amount` harus sama dengan `Payment.amount`, dan `transaction_id` harus cocok
+  dengan yang diterima saat charge.
+- Pelunasan hanya diterima dari notifikasi berstatus code `200`; capture dengan fraud
+  `deny` menghasilkan `FAILED`, bukan `PAID`.
+- `GET /api/orders/:code/payment` memakai batas tanggal bisnis yang sama dengan daftar order:
+  kasir hanya boleh membuka pesanan hari ini.
+- Notifikasi uji dashboard (`order_id` berawalan `payment_notif_test_`) dibalas 200 tanpa
+  menyentuh database; order nyata yang tidak dikenal tetap 404.
+- Hanya baris payment berstatus `PENDING` yang boleh berubah (`updateMany` dengan syarat itu),
+  sehingga notifikasi ganda atau polling yang berulang tidak membuat pembayaran kedua.
+- Status order tidak pernah dikirim klien; semua perubahan berasal dari gateway.
 
-## 5. Contoh Permintaan Charge API (QRIS)
+## 4. Konfigurasi
 
-```http
-POST https://api.sandbox.midtrans.com/v2/charge
-Authorization: Basic base64(MIDTRANS_SERVER_KEY:)
-Content-Type: application/json
-```
-```jsonc
-{
-  "payment_type": "qris",
-  "transaction_details": {
-    "order_id": "t-001-1695378600",
-    "gross_amount": 55000
-  },
-  "qris": { "acquirer": "gopay" }
-}
-```
+| Variabel | Keterangan |
+|---|---|
+| `MIDTRANS_SERVER_KEY` | Kunci server sandbox/production untuk memanggil Core API; wajib untuk QRIS |
+| `MIDTRANS_SIGNATURE_SECRET` | Kunci penanda tangan notifikasi (Signature Secret Key); sejak 28-10-2026 menggantikan server key pada formula SHA-512 |
+| `MIDTRANS_CLIENT_KEY` | Disimpan untuk kebutuhan kanal lain; belum dipakai frontend |
+| `MIDTRANS_IS_PRODUCTION` | `true` memakai `api.midtrans.com`, selain itu sandbox |
+| `MIDTRANS_NOTIFICATION_URL` | Bila diisi, charge mengirim header `X-Override-Notification` sehingga URL ini menggantikan setelan dashboard |
+| `MIDTRANS_EXPIRY_MINUTES` | Cadangan bila respons charge tidak membawa `expiry_time` |
 
-> `order_id` sebaiknya digabung dari `transaction_id` internal + timestamp agar unik setiap
-> percobaan bayar, karena Midtrans mensyaratkan `order_id` unik per transaksi.
+Signature memakai `MIDTRANS_SIGNATURE_SECRET` bila diisi; server key tetap diterima sebagai
+cadangan untuk akun yang notifikasinya masih ditandatangani dengan kunci lama.
 
-## 6. Contoh Respons Charge API
+Kredensial hanya ada di `backend/.env` (tidak masuk repo). URL webhook diatur di dashboard
+Midtrans: `https://<domain>/api/payments/midtrans/notification`.
 
-```jsonc
-{
-  "status_code": "201",
-  "transaction_id": "8b1e...-midtrans",
-  "order_id": "t-001-1695378600",
-  "gross_amount": "55000.00",
-  "transaction_status": "pending",
-  "actions": [
-    {
-      "name": "generate-qr-code",
-      "method": "GET",
-      "url": "https://api.sandbox.midtrans.com/v2/qris/8b1e.../qr-code"
-    }
-  ]
-}
-```
-Backend meneruskan URL/string QR dari `actions` ke frontend untuk dirender sebagai gambar QR
-(lihat `qrcode.react` pada `2-frontend-dependencies.md`).
+## 5. Pengujian
 
-## 7. Webhook Notifikasi & Verifikasi Signature
-
-**Contoh payload masuk ke `POST /payments/midtrans/callback`:**
-```jsonc
-{
-  "order_id": "t-001-1695378600",
-  "status_code": "200",
-  "gross_amount": "55000.00",
-  "transaction_status": "settlement",
-  "signature_key": "a94a8fe5ccb19ba61c4c0873d391e987..."
-}
-```
-
-**Verifikasi wajib** sebelum mempercayai payload (mencegah pihak lain memalsukan notifikasi
-"lunas"):
-
-```
-signature_key harus sama dengan:
-  SHA512( order_id + status_code + gross_amount + MIDTRANS_SERVER_KEY )
-```
-
-Contoh implementasi Node.js:
-```ts
-import crypto from "crypto";
-
-function verifyMidtransSignature(payload: {
-  order_id: string;
-  status_code: string;
-  gross_amount: string;
-  signature_key: string;
-}) {
-  const raw =
-    payload.order_id +
-    payload.status_code +
-    payload.gross_amount +
-    process.env.MIDTRANS_SERVER_KEY;
-
-  const expected = crypto.createHash("sha512").update(raw).digest("hex");
-  return expected === payload.signature_key;
-}
-```
-
-Jika verifikasi gagal, endpoint mengembalikan `403` dan **tidak** mengubah status apa pun.
-
-## 8. Pemetaan Status Midtrans → Status Internal
-
-| `transaction_status` Midtrans | `PaymentStatus` internal | Aksi backend |
-|---|---|---|
-| `pending` | `pending` | Tidak ada perubahan, tunggu notifikasi berikutnya |
-| `settlement` / `capture` | `lunas` | Set `paid_at = now()`, update `transactions.payment_status = lunas` |
-| `deny` / `cancel` | `gagal` | Tandai gagal, izinkan kasir membuat percobaan bayar baru |
-| `expire` | `gagal` | QR kedaluwarsa (umumnya 15 menit), kasir bisa membuat QR baru |
-
-## 9. Keamanan & Praktik Baik
-
-- **Server Key tidak pernah** dikirim ke frontend maupun disertakan dalam log yang mudah
-  diakses.
-- URL webhook (`Payment Notification URL`) didaftarkan di dashboard Midtrans **melalui
-  HTTPS** — Midtrans menolak URL notifikasi berbasis HTTP di mode produksi.
-- Simpan seluruh payload webhook mentah ke log terstruktur (`pino`) untuk keperluan audit bila
-  ada perselisihan pembayaran dengan pelanggan.
-- Terapkan idempotensi: jika webhook yang sama diterima dua kali (Midtrans bisa mengirim
-  ulang), pastikan status yang sudah `lunas` tidak diproses ulang/ditimpa.
-- Selama pengembangan, gunakan **Midtrans Simulator** di dashboard Sandbox untuk mensimulasikan
-  pembayaran QRIS berhasil tanpa transaksi nyata.
-
-## 10. Ringkasan Endpoint Terkait
-
-Lihat `6-backend-api.md` bagian 7 untuk daftar lengkap endpoint `/payments/*` beserta contoh
-request/response pada sisi aplikasi Warung Kikil Abang.
+- `backend/src/services/midtrans.test.js` menguji signature valid, payload yang diubah, dan
+  signature rusak.
+- `backend/src/routes/payments.test.js` menguji pelunasan, notifikasi ganda, signature salah,
+  jumlah tidak cocok, kedaluwarsa, polling, dan galat gateway.
+- Uji sandbox manual sudah dilakukan: charge QRIS nyata dari aplikasi lokal, polling
+  `PENDING`, lalu pelunasan lewat notifikasi bertanda tangan.

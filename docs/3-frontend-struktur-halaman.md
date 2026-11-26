@@ -1,124 +1,85 @@
-# Frontend Structure — Warung Kikil Abang POS
+# Struktur Frontend — Aktual
 
-## 1. Struktur Folder
+## 1. Struktur Source
 
-```
-src/
-├── main.tsx
-├── App.tsx
-├── routes/
-│   └── AppRouter.tsx
+```text
+frontend/src/
+├── App.jsx                 # Deklarasi routing
+├── main.jsx                # Provider dan bootstrap React
+├── api/                    # fetch client dan konfigurasi TanStack Query
+├── auth/                   # AuthContext dan RequireRole
+├── components/             # Komponen UI/domain bersama
+├── context/                # Keranjang dan reducer
 ├── pages/
-│   ├── auth/
-│   │   └── LoginPage.tsx
-│   ├── kasir/
-│   │   ├── BuatTransaksiPage.tsx
-│   │   ├── PembayaranPage.tsx
-│   │   └── StrukPage.tsx
-│   ├── riwayat/
-│   │   ├── RiwayatTransaksiPage.tsx
-│   │   └── DetailTransaksiPage.tsx
-│   ├── menu/
-│   │   ├── DaftarMenuPage.tsx
-│   │   ├── FormMenuPage.tsx
-│   │   └── DaftarKategoriPage.tsx
-│   └── laporan/
-│       └── LaporanPenjualanPage.tsx
-├── components/
-│   ├── ui/                # Button, Card, Modal, Toast, Badge, NumericKeypad
-│   ├── layout/             # BottomNav, Header, StickyActionBar
-│   └── domain/             # MenuCard, CartItemRow, StatusBadge, QRDisplay
-├── features/
-│   ├── auth/               # useAuth, authStore
-│   ├── menu/               # useMenus, useCategories (react-query hooks)
-│   ├── transaksi/          # useCart (zustand), useCreateTransaction
-│   ├── pembayaran/         # useCashPayment, useQrisPayment, useQrisStatusPolling
-│   └── laporan/            # useSalesReport, useTopMenu
-├── lib/
-│   ├── apiClient.ts        # instance axios + interceptor JWT
-│   └── formatters.ts       # format Rupiah, format tanggal
-└── styles/
-    └── tokens.css          # variabel warna & spacing dari 1-frontend-design.md
+│   ├── cashier/            # POS, pembayaran, pesanan, penjualan, login
+│   └── owner/              # Dashboard, kalender, menu, kasir, penjualan, performa
+├── data.js                 # Menu default dan generator data riwayat demo
+├── selectors.js            # Agregasi/filter data transaksi untuk UI
+├── store.jsx               # Store aplikasi dan persistensi browser
+└── index.css               # Gaya visual global
 ```
 
-## 2. Peta Routing
+## 2. Routing
 
-| Path | Halaman | Akses | Proses DFD terkait |
-|---|---|---|---|
-| `/login` | Login | Publik | — |
-| `/kasir` | Buat Transaksi | Kasir, Pemilik | 2.1 Input pesanan |
-| `/kasir/pembayaran` | Pembayaran | Kasir, Pemilik | 2.2–2.3, 3.1–3.4 |
-| `/kasir/struk/:id` | Struk transaksi selesai | Kasir, Pemilik | — |
-| `/riwayat` | Riwayat Transaksi | Kasir, Pemilik | — |
-| `/riwayat/:id` | Detail Transaksi | Kasir, Pemilik | — |
-| `/menu` | Daftar Menu | Pemilik (kelola), Kasir (lihat saja) | 1.1–1.4 |
-| `/menu/baru`, `/menu/:id/ubah` | Form Tambah/Ubah Menu | Pemilik | 1.1, 1.3 |
-| `/menu/kategori` | Kelola Kategori | Pemilik | 1.2 |
-| `/laporan` | Laporan Penjualan & Menu Terlaris | Pemilik | 4.1–4.4 |
-
-Route dibungkus `ProtectedRoute` yang memeriksa token JWT dan `role` pengguna; halaman yang
-diakses tanpa hak yang sesuai dialihkan ke halaman yang diizinkan beserta pesan singkat,
-bukan halaman error teknis.
-
-## 3. Komponen Domain Utama
-
-| Komponen | Fungsi |
-|---|---|
-| `MenuCard` | Menampilkan satu menu dengan foto, nama, harga, badge Tersedia/Habis, dan tombol tambah/stepper jumlah |
-| `CartItemRow` | Baris item di keranjang berjalan, dengan stepper `－ / ＋` dan subtotal otomatis |
-| `StickyActionBar` | Bar tetap di bawah layar berisi total harga & tombol aksi utama (dijelaskan di `1-frontend-design.md` bagian layout) |
-| `StatusBadge` | Badge warna+label konsisten untuk status menu & pembayaran |
-| `QRDisplay` | Menampilkan kode QR besar dari data QRIS yang dikirim backend, plus indikator status *menunggu/lunas/gagal* |
-| `NumericKeypad` | Keypad angka besar untuk input nominal tunai diterima, meminimalkan salah ketuk dibanding keyboard bawaan ponsel |
-| `PeriodFilter` | Pemilih periode laporan: Harian / Bulanan / Custom (rentang tanggal) |
-
-## 4. Alur Layar: Transaksi sampai Pembayaran
-
-```
-[Login] → [Buat Transaksi]
-              │  kasir memilih menu (baca D2 Menus, hanya yang is_available)
-              ▼
-        [Keranjang terisi] --tambah/kurangi item--> (subtotal & total dihitung live di client,
-                                                       divalidasi ulang oleh backend saat submit)
-              │  tekan "Lanjut ke Pembayaran"
-              ▼
-        [Pilih Metode Bayar: Cash / QRIS]
-              │
-      ┌───────┴────────┐
-      ▼                ▼
- [Input Tunai]    [Tampilkan QR]
-  hitung kembalian   polling status tiap beberapa detik
-      │                │  status berubah "Lunas" otomatis
-      └───────┬────────┘
-              ▼
-         [Struk / Selesai] → transaksi otomatis tercatat di Riwayat
-```
-
-Perhitungan total di frontend bersifat **tampilan saja**; backend selalu menghitung ulang
-subtotal & total dari harga menu yang tersimpan di database saat transaksi disimpan, agar
-tidak bisa dimanipulasi dari sisi klien.
-
-## 5. Strategi State Management
-
-| Jenis state | Alat | Contoh |
+| Path | Halaman | Role |
 |---|---|---|
-| **Server state** (data dari API, perlu cache & refetch) | `@tanstack/react-query` | Daftar menu, riwayat transaksi, laporan penjualan |
-| **UI/client state** (tidak berasal dari server) | `zustand` | Keranjang transaksi berjalan (`useCartStore`), status modal, sesi login (token & role) |
-| **Form state** | `react-hook-form` + `zod` | Form tambah/ubah menu, form login |
-| **Status pembayaran real-time** | `react-query` dengan `refetchInterval` (polling ringan tiap 3 detik) pada endpoint status QRIS, dihentikan otomatis setelah status final (`lunas`/`gagal`) | Layar `PembayaranPage` |
+| `/` | Landing | Publik |
+| `/pemilik/login` | Login pemilik | Publik |
+| `/pemilik` | Dashboard pemilik | `OWNER` |
+| `/pemilik/kalender` | Kalender | `OWNER` |
+| `/pemilik/menu` | Pengelolaan menu frontend | `OWNER` |
+| `/pemilik/kasir` | Pengelolaan akun kasir via API | `OWNER` |
+| `/pemilik/penjualan` | Rekap/riwayat penjualan frontend | `OWNER` |
+| `/pemilik/performa` | Performa kasir dari indeks transaksi frontend | `OWNER` |
+| `/kasir/login` | Login kasir | Publik |
+| `/kasir` | POS | `CASHIER` |
+| `/kasir/pesanan` | Papan pesanan | `CASHIER` |
+| `/kasir/penjualan` | Penjualan hari ini | `CASHIER` |
+| path lain | Dialihkan ke `/` | — |
 
-Keranjang (`useCartStore`) sengaja disimpan di memori (zustand), bukan `localStorage`, karena
-sifatnya transaksi yang sedang berjalan di satu sesi kasir — dikosongkan begitu transaksi
-selesai atau dibatalkan.
+`RequireRole` menggunakan sesi dari `AuthContext`; otorisasi API tetap diperiksa backend.
 
-## 6. Halaman Pemilik vs Halaman Kasir
+## 3. Sumber dan Persistensi Data
 
-Aplikasi memakai **satu basis kode React yang sama**, dengan navigasi bawah (`BottomNav`) yang
-menyesuaikan `role` pengguna setelah login:
+| Data | Sumber aktual |
+|---|---|
+| Menu dan kategori | API `/api/menus`; perubahan pemilik disimpan ke database |
+| Penanda kalender dan opsi Minggu libur | `localStorage` |
+| Riwayat sebelum hari ini | Dibuat lokal oleh `generateHistory` sebagai data demo |
+| Sesi login | Endpoint backend; JWT tersimpan sebagai cookie `httpOnly` |
+| Daftar dan perubahan akun kasir | Endpoint backend melalui TanStack Query |
+| Pesanan hari ini | API `/api/orders` dan notifikasi Socket.IO; digabung dengan data lokal |
+| Keranjang aktif | React Context/reducer, berada di memori dan dibersihkan saat logout/login |
 
-- **Kasir** melihat tab: *Kasir*, *Riwayat*, *Menu* (mode lihat saja).
-- **Pemilik** melihat tab: *Kasir* (opsional, bila pemilik turut melayani), *Riwayat*, *Menu*
-  (mode kelola penuh), *Laporan*.
+State menu browser tidak otomatis menjadi data tabel `Menu` pada PostgreSQL. Riwayat demo
+bukan transaksi database; nilai dashboard/penjualan dapat mencampur riwayat demo dengan
+pesanan aktual.
 
-Pendekatan satu basis kode ini dipilih agar pemeliharaan aplikasi tetap ringkas — sesuai
-konteks tim pengembang kecil untuk UMKM — dibanding membangun dua aplikasi terpisah.
+## 4. Alur POS dan Pembayaran
+
+1. Kasir memilih menu, jumlah, catatan item, serta dine-in atau takeaway.
+2. Frontend menampilkan subtotal/total berdasarkan data menu lokal.
+3. Untuk Cash, kasir memasukkan uang diterima; frontend mengirimkan pesanan ke `POST /api/orders`.
+4. Untuk QRIS, frontend menampilkan QR contoh `QRIS-MOCK` dan meminta kasir menekan tombol
+   simulasi; tidak ada pembayaran eksternal yang diverifikasi.
+5. Backend menghitung kembali harga dari menu database, membuat order, item, pembayaran
+   `PAID`, kode transaksi, nomor antrean, lalu mengirim event `order:created`.
+6. Frontend menampilkan antrean dan nota.
+
+Data menu frontend dan menu database dapat berbeda. Karena backend menghitung berdasarkan
+database, menu dari browser harus tersedia dan sesuai di database agar pesanan tersimpan.
+Perhatian: pada jalur pembuatan order, service pricing saat ini hanya mengambil menu yang
+dikirim sebagai item pesanan. Untuk menu paket, menu komponen tidak ikut dimuat secara otomatis
+oleh query tersebut; harga paket server perlu diverifikasi/diperbaiki sebelum dipakai.
+
+## 5. State UI
+
+- `StoreProvider`: state menu/kategori, data riwayat, penanda kalender dan pesanan server.
+- `CartProvider`: item dan tipe pesanan yang sedang dibuat.
+- `AuthProvider`: sesi pengguna, login/logout.
+- TanStack Query dipakai terutama untuk sesi dan operasi kasir.
+- Socket.IO melakukan sinkronisasi ulang daftar pesanan saat tersambung kembali, serta menerima
+  pesanan baru.
+
+Beberapa pembaruan status pesanan dan riwayat demo hanya mengubah state frontend; tidak ada API
+untuk menyimpan perubahan tersebut di backend saat ini.

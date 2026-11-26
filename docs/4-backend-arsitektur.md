@@ -1,156 +1,84 @@
-# Backend Architecture — Warung Kikil Abang POS
+# Arsitektur Backend — Aktual
 
 ## 1. Tumpukan Teknologi
 
-| Komponen | Pilihan | Alasan |
-|---|---|---|
-| Runtime | Node.js 20 LTS | Sesuai permintaan mitra |
-| Framework HTTP | Express.js | Ringan, ekosistem middleware luas, cocok untuk API skala UMKM |
-| ORM | Prisma | Skema terketik (type-safe), migrasi otomatis, cocok dipetakan langsung dari ERD |
-| Database | PostgreSQL (rekomendasi) | Dukungan enum native (`role`, `payment_status`, dll.) — MySQL tetap kompatibel via Prisma bila dipilih |
-| Autentikasi | JWT (`jsonwebtoken`) + `bcrypt` | Stateless, cukup untuk skala 1 warung, tanpa perlu session store terpisah |
-| Validasi input | `zod` | Skema validasi request body/query yang konsisten dengan frontend |
-| Payment Gateway | Midtrans Core API (`midtrans-client`) | Lihat `7-integrasi-midtrans.md` |
-| Logging | `pino` | Logging terstruktur, penting untuk audit log notifikasi pembayaran |
-| Keamanan HTTP | `helmet`, `cors`, `express-rate-limit` | Header aman, pembatasan origin, pembatasan percobaan login |
-
-## 2. Struktur Folder
-
-```
-src/
-├── server.ts                 # entry point, start HTTP server
-├── app.ts                    # setup Express app & middleware global
-├── config/
-│   ├── env.ts                 # validasi & baca environment variables
-│   └── midtrans.ts            # konfigurasi client Midtrans
-├── routes/
-│   ├── auth.routes.ts
-│   ├── users.routes.ts
-│   ├── categories.routes.ts
-│   ├── menus.routes.ts
-│   ├── transactions.routes.ts
-│   ├── payments.routes.ts
-│   └── reports.routes.ts
-├── controllers/               # menerima request, memanggil service, membentuk response
-├── services/                  # logika bisnis inti (hitung total, agregasi laporan, dsb.)
-├── repositories/              # akses data via Prisma Client
-├── middlewares/
-│   ├── auth.middleware.ts     # verifikasi JWT
-│   ├── rbac.middleware.ts     # cek role (kasir/pemilik)
-│   ├── validate.middleware.ts # jalankan skema zod
-│   └── errorHandler.middleware.ts
-├── validators/                 # skema zod per endpoint
-├── utils/
-│   ├── apiResponse.ts          # format response standar
-│   └── signature.ts            # verifikasi signature webhook Midtrans
-└── prisma/
-    └── schema.prisma           # lihat 5-backend-database.md
-```
-
-## 3. Arsitektur Berlapis (Layered Architecture)
-
-```
-Request
-   │
-   ▼
-Route ──▶ Middleware (auth, RBAC, validasi)
-   │
-   ▼
-Controller  (hanya menerjemahkan HTTP ⇄ pemanggilan service, tanpa logika bisnis)
-   │
-   ▼
-Service     (logika bisnis: hitung subtotal/total, agregasi laporan, alur pembayaran)
-   │
-   ▼
-Repository  (query Prisma ke database)
-   │
-   ▼
-Database (PostgreSQL)
-```
-
-Pemisahan ini memastikan logika penting — misalnya **perhitungan ulang total transaksi di
-server** (bukan memercayai angka dari frontend) — berada di lapisan `service`, terpisah dari
-detail HTTP maupun detail query database, sehingga mudah diuji secara unit test.
-
-## 4. Alur Autentikasi & Role-Based Access Control (RBAC)
-
-```
-POST /api/auth/login  { username, password }
-        │
-        ▼
- Verifikasi password (bcrypt.compare terhadap hash di tabel users)
-        │
-        ▼
- Terbitkan JWT berisi { userId, role, exp } → dikirim ke klien
-        │
-        ▼
- Setiap request berikutnya menyertakan header:
-   Authorization: Bearer <token>
-        │
-        ▼
- auth.middleware memverifikasi token & menempelkan req.user
-        │
-        ▼
- rbac.middleware(["pemilik"]) menolak akses bila req.user.role tidak sesuai
-```
-
-Contoh pemetaan RBAC ke endpoint (rinci di `6-backend-api.md`):
-
-| Aksi | Kasir | Pemilik |
-|---|:---:|:---:|
-| Lihat daftar menu | ✅ | ✅ |
-| Tambah/ubah/hapus menu & kategori | ❌ | ✅ |
-| Buat transaksi & proses pembayaran | ✅ | ✅ |
-| Lihat riwayat transaksi | ✅ | ✅ |
-| Lihat laporan penjualan & menu terlaris | ❌ | ✅ |
-| Kelola akun pengguna (tambah kasir baru) | ❌ | ✅ |
-
-## 5. Format Response Standar
-
-Semua endpoint mengembalikan bentuk response yang konsisten agar frontend dapat menangani
-sukses/gagal secara seragam:
-
-```jsonc
-// Sukses
-{
-  "success": true,
-  "data": { /* ... */ }
-}
-
-// Gagal
-{
-  "success": false,
-  "error": {
-    "code": "MENU_NOT_FOUND",
-    "message": "Menu tidak ditemukan"
-  }
-}
-```
-
-`errorHandler.middleware.ts` menangkap seluruh error (termasuk error validasi zod dan error
-Prisma) dan menerjemahkannya ke format di atas beserta HTTP status code yang sesuai (400, 401,
-403, 404, 409, 500).
-
-## 6. Checklist Keamanan
-
-- [ ] Password disimpan sebagai hash `bcrypt` (bukan plain text), sesuai kolom `password` pada
-      entitas Users.
-- [ ] Rate limiting pada `POST /api/auth/login` untuk mencegah brute force.
-- [ ] Endpoint webhook Midtrans (`POST /api/payments/midtrans/callback`) diverifikasi
-      menggunakan signature key, **bukan** hanya mengandalkan IP atau header biasa (lihat
-      `7-integrasi-midtrans.md`).
-- [ ] `helmet` aktif untuk header keamanan HTTP standar.
-- [ ] CORS dibatasi hanya ke origin frontend resmi (domain aplikasi kasir), bukan `*`.
-- [ ] Server Key Midtrans hanya berada di environment variable backend, tidak pernah dikirim
-      ke frontend.
-- [ ] Total transaksi selalu dihitung ulang di backend dari harga menu di database, tidak
-      memercayai nilai `total_price` yang dikirim klien.
-
-## 7. Catatan Deployment (Ringkas)
-
-| Aspek | Rekomendasi |
+| Komponen | Implementasi |
 |---|---|
-| Process manager | `pm2` untuk auto-restart & log rotation di VPS kecil |
-| Reverse proxy | Nginx, sekaligus menangani HTTPS (wajib — Midtrans mensyaratkan HTTPS untuk URL notifikasi produksi) |
-| Environment | Pisahkan `.env` sandbox dan production, terutama kredensial Midtrans |
-| Migrasi database | `npx prisma migrate deploy` dijalankan sebagai bagian dari proses deploy |
+| Runtime | Node.js `>=20`, JavaScript ESM langsung dari `src/` |
+| HTTP | Express 4 |
+| Database | PostgreSQL melalui Prisma 6 |
+| Validasi | Zod pada middleware route |
+| Sesi | JWT pada cookie `wk_session` beratribut `httpOnly`; hash password/PIN memakai `bcryptjs` |
+| Realtime | Socket.IO untuk `order:created` |
+| Logging/HTTP security | Pino, Helmet, CORS, express-rate-limit |
+
+## 2. Struktur Aktual
+
+```text
+backend/src/
+├── app.js                 # Express middleware, API router, static serving
+├── server.js              # HTTP + Socket.IO server, auth socket, shutdown
+├── config/env.js          # Zod validation environment
+├── lib/                   # Prisma, error/response, WIB, logger, realtime
+├── middleware/            # autentikasi/role, validasi, error handler
+├── routes/                # auth, cashiers, orders
+└── services/              # auth, orders/pricing, shifts
+backend/prisma/
+├── schema.prisma
+└── migrations/
+```
+
+Tidak ada controller atau repository terpisah. Route memvalidasi input, memanggil service atau
+Prisma, lalu membentuk response.
+
+## 3. Alur Request dan Data
+
+```text
+HTTP request
+  → Express middleware (Helmet, logging, JSON, cookie, CORS)
+  → /api route
+  → autentikasi + validasi Zod
+  → service / Prisma Client
+  → PostgreSQL
+```
+
+API dipasang pada `/api`. Endpoint yang tersedia hanya health, auth, cashiers, dan orders;
+daftar rincinya ada di `6-backend-api.md`.
+
+Untuk pesanan, backend mengambil menu dari database, memvalidasi dan menghitung harga di
+`services/pricing.js`, memastikan shift kasir aktif, lalu dalam transaksi database menyimpan
+order, item, dan payment. Setelah penyimpanan berhasil, event disiarkan ke room Socket.IO
+`staff`.
+
+## 4. Sesi dan Akses
+
+- Login pemilik memakai username/password; login kasir memakai ID kasir/PIN empat digit.
+- Token JWT bertahan 12 jam dan disetel pada cookie `wk_session`.
+- Kasir dikunci selama 15 menit setelah lima PIN salah. Login pemilik menggunakan penundaan
+  progresif, bukan lockout tersebut.
+- Login dibatasi per IP oleh rate limiter (default 10 percobaan per 15 menit).
+- Endpoint pengelolaan kasir khusus `OWNER`; membuat order khusus `CASHIER`; daftar order
+  dapat dibaca kedua role, dengan kasir terbatas pada tanggal bisnis hari ini.
+- Cookie socket juga diverifikasi sebelum koneksi bergabung ke room `staff`.
+
+## 5. Response dan Error
+
+Sukses memakai `{ "success": true, "data": ... }`; error memakai
+`{ "success": false, "error": { "code": ..., "message": ... } }`. Logout dan penggantian PIN
+mengembalikan HTTP 204 tanpa body.
+
+## 6. Konfigurasi dan Frontend Statis
+
+Environment yang divalidasi didefinisikan di `backend/src/config/env.js`: `NODE_ENV`, `PORT`,
+`HOST`, `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_ORIGIN`, serta variabel `MIDTRANS_*`.
+`MIDTRANS_SERVER_KEY` dipakai `services/midtrans.js` untuk charge QRIS dan verifikasi webhook.
+
+Jika `frontend/dist` ada, backend melayani berkas statis dan fallback SPA. Jika belum dibangun,
+backend tetap dapat melayani API dan static serving dilewati.
+
+## 7. Hal yang Belum Ada
+
+- Lapisan controller/repository terpisah.
+- API backend untuk laporan atau pembaruan status pesanan.
+- Pembatalan QRIS dari aplikasi dan rekonsiliasi ulang transaksi yang sudah lunas.
+- Kesesuaian penuh data demo frontend dengan database.

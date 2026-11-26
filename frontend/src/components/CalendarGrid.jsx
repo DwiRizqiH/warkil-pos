@@ -1,8 +1,8 @@
 import Icon from './Icon.jsx';
-import { MONTHS_ID, pad } from '../utils.js';
+import { MONTHS_ID, pad, rupiahShort } from '../utils.js';
 
 // Kalender bulanan. Tanggal libur berwarna merah, event ditandai dengan nama.
-export default function CalendarGrid({ cursor, onCursor, selected, onSelect, getMark, todayStr }) {
+export default function CalendarGrid({ cursor, onCursor, selected, onSelect, getMark, todayStr, salesByDate }) {
   const y = cursor.getFullYear();
   const m = cursor.getMonth();
   const lead = new Date(y, m, 1).getDay();
@@ -37,6 +37,7 @@ export default function CalendarGrid({ cursor, onCursor, selected, onSelect, get
           if (!d) return <div key={i} className="cal-cell empty" />;
           const date = `${y}-${pad(m + 1)}-${pad(d)}`;
           const mark = getMark ? getMark(date) : null;
+          const sale = salesByDate?.get(date);
           const cls = ['cal-cell'];
           if (mark?.type === 'libur') cls.push('libur');
           if (mark?.type === 'event') cls.push('event');
@@ -46,6 +47,7 @@ export default function CalendarGrid({ cursor, onCursor, selected, onSelect, get
           return (
             <button key={i} className={cls.join(' ')} onClick={() => onSelect(date)}>
               <span className="cal-num">{d}</span>
+              {sale && sale.count > 0 && <span className="cal-sale">{rupiahShort(sale.total)}</span>}
               {mark?.type === 'event' && <span className="cal-ev">{mark.name}</span>}
               {mark?.type === 'libur' && <span className="cal-ev">Libur</span>}
             </button>
