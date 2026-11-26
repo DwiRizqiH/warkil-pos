@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, businessDate, businessDayEnd, businessDayStart, lastNDates, shiftIndexOf } from './wib.js';
+import { addDays, businessDate, businessDayEnd, businessDayStart, lastNDates, parseWibDateTime, shiftIndexOf } from './wib.js';
 
 describe('businessDate', () => {
   it('memakai tanggal Jakarta, bukan UTC', () => {
@@ -32,6 +32,10 @@ describe('aritmetika tanggal', () => {
 });
 
 describe('waktu Jakarta', () => {
+  it('membaca waktu Midtrans "YYYY-MM-DD HH:mm:ss" sebagai WIB', () => {
+    expect(parseWibDateTime('2026-11-26 11:27:33').toISOString()).toBe('2026-11-26T04:27:33.000Z');
+  });
+
   it('shiftIndexOf memakai batas pukul 15:00 seperti mockup', () => {
     expect(shiftIndexOf('08:00')).toBe(0);
     expect(shiftIndexOf('14:59')).toBe(0);

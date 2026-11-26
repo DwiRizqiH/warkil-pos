@@ -5,7 +5,8 @@ import { ok } from '../lib/respond.js';
 import { businessDate } from '../lib/wib.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { createPaidOrder, ordersForDate } from '../services/orders.js';
+import { createOrder, ordersForDate } from '../services/orders.js';
+import { refreshQrisPayment } from '../services/payments.js';
 
 const lineSchema = z.object({
   productId: z.string().min(1),
@@ -43,7 +44,15 @@ ordersRouter.get('/', validate({ query: listQuery }), async (req, res, next) => 
 
 ordersRouter.post('/', requireRole('CASHIER'), validate({ body: createBody }), async (req, res, next) => {
   try {
-    ok(res, await createPaidOrder({ cashier: req.auth, input: req.body }), 201);
+    ok(res, await createOrder({ cashier: req.auth, input: req.body }), 201);
+  } catch (err) {
+    next(err);
+  }
+});
+
+ordersRouter.get('/:code/payment', async (req, res, next) => {
+  try {
+    ok(res, await refreshQrisPayment(req.params.code));
   } catch (err) {
     next(err);
   }

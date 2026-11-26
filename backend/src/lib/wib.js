@@ -23,6 +23,11 @@ export function businessDayEnd(date) {
   return new Date(businessDayStart(date).getTime() + DAY_MS);
 }
 
+// Midtrans prints times as "YYYY-MM-DD HH:mm:ss" in the merchant's timezone, WIB for this account.
+export function parseWibDateTime(text) {
+  return new Date(`${text.replace(' ', 'T')}+07:00`);
+}
+
 export function addDays(date, days) {
   return new Date(Date.parse(`${date}T00:00:00.000Z`) + days * DAY_MS).toISOString().slice(0, 10);
 }

@@ -78,15 +78,15 @@ Jangan masukkan PIN, password, token, cookie, atau data pribadi ke laporan maupu
 
 ### Midtrans
 
-Status: ditunda. Pembayaran QRIS di halaman Kasir masih simulasi (pesanan tersimpan, tetapi QR tidak memanggil Midtrans).
+Status: QRIS Core API terpasang. Halaman Kasir menampilkan QR asli dari Midtrans dan menunggu
+pelunasan lewat webhook atau polling status.
 
-Yang belum dikerjakan:
+- `POST /api/payments/midtrans/notification` memverifikasi signature SHA-512 dan idempoten.
+- `GET /api/orders/:code/payment` menyinkronkan status untuk development tanpa URL publik.
+- Uji sandbox berhasil untuk pembuatan charge, status `PENDING`, dan pelunasan.
 
-- Endpoint pembuatan transaksi Snap dan halaman pembayaran.
-- Webhook notifikasi dengan verifikasi signature SHA512, idempotensi, dan rekonsiliasi status pesanan.
-- Uji sandbox untuk pembayaran berhasil, gagal, kedaluwarsa, dan webhook ganda.
-
-Variabel `.env` sudah tersedia: `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_IS_PRODUCTION`, `MIDTRANS_EXPIRY_MINUTES`. Saat melanjutkan, verifikasi dulu kunci sandbox di server — kunci yang terpasang sekarang ditolak Midtrans.
+Variabel `.env`: `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_IS_PRODUCTION`,
+`MIDTRANS_EXPIRY_MINUTES`. Kredensial hanya disimpan di server, tidak di repo.
 
 ## Menjalankan test otomatis
 

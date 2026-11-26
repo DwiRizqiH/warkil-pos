@@ -14,3 +14,5 @@ export const forbidden = (message = 'Tidak punya akses') => new AppError(403, 'F
 export const notFound = (message = 'Data tidak ditemukan') => new AppError(404, 'NOT_FOUND', message);
 export const conflict = (message) => new AppError(409, 'CONFLICT', message);
 export const locked = (message) => new AppError(423, 'LOCKED', message);
+export const badGateway = (message) => new AppError(502, 'BAD_GATEWAY', message);
+export const unavailable = (message) => new AppError(503, 'UNAVAILABLE', message);

@@ -166,8 +166,8 @@ model Payment {
   midtransOrderId       String?       @unique @map("midtrans_order_id") // {code}-{attemptNo}
   midtransTransactionId String?       @map("midtrans_transaction_id")
   paymentType           String?       @map("payment_type")     // qris, gopay, bank_transfer, …
-  snapToken             String?       @map("snap_token")
-  snapExpiresAt         DateTime?     @map("snap_expires_at")
+  qrString              String?       @map("qr_string")
+  expiresAt             DateTime?     @map("expires_at")
   rawPayload            Json?         @map("raw_payload")
   failureReason         String?       @map("failure_reason")
   flaggedForRefund      Boolean       @default(false) @map("flagged_for_refund")

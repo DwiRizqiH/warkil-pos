@@ -58,11 +58,10 @@ Unique constraints dan primary keys seperti pada bagian 3 juga dibuat di databas
 
 ## 5. Catatan Konsistensi Implementasi
 
-- Model memiliki beberapa field/status pembayaran untuk dukungan lebih luas, tetapi alur
-  `POST /api/orders` saat ini menyimpan pembayaran langsung sebagai `PAID`, baik untuk Cash
-  maupun QRIS mock.
+- `POST /api/orders` menyimpan pembayaran tunai langsung sebagai `PAID`. Pembayaran QRIS
+  menyimpan order `UNPAID` dan payment `PENDING` sampai gateway melaporkan `settlement`;
+  `qrString` dan `expiresAt` menyimpan payload QR beserta masa berlakunya.
 - API yang aktif belum melakukan CRUD pada model `Menu`, `Category`, `CalendarMark`, dan
   `Setting`.
-- Model `Payment` mendukung percobaan dan field Midtrans, tetapi tidak membuktikan bahwa
-  integrasi gateway sudah berjalan.
+- `Payment.rawPayload` menyimpan payload terakhir dari Midtrans untuk penelusuran.
 - Nilai uang pada model aktif adalah integer, bukan `Decimal`.

@@ -71,7 +71,7 @@ mengembalikan HTTP 204 tanpa body.
 
 Environment yang divalidasi didefinisikan di `backend/src/config/env.js`: `NODE_ENV`, `PORT`,
 `HOST`, `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_ORIGIN`, serta variabel `MIDTRANS_*`.
-Variabel Midtrans saat ini hanya dibaca; belum ada integrasi pembayaran di kode.
+`MIDTRANS_SERVER_KEY` dipakai `services/midtrans.js` untuk charge QRIS dan verifikasi webhook.
 
 Jika `frontend/dist` ada, backend melayani berkas statis dan fallback SPA. Jika belum dibangun,
 backend tetap dapat melayani API dan static serving dilewati.
@@ -80,5 +80,5 @@ backend tetap dapat melayani API dan static serving dilewati.
 
 - Lapisan controller/repository terpisah.
 - API backend untuk menu, kategori, laporan, atau pembaruan status pesanan.
-- Pemrosesan Midtrans dan webhook.
+- Pembatalan QRIS dari aplikasi dan rekonsiliasi ulang transaksi yang sudah lunas.
 - Kesesuaian penuh data demo frontend dengan database.

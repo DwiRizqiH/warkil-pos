@@ -1,10 +1,25 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
 import { prisma } from '../lib/prisma.js';
 import { businessDate } from '../lib/wib.js';
 import { hashSecret } from '../services/auth.js';
+import { createQrisCharge } from '../services/midtrans.js';
 import { resetDb } from '../test/db.js';
+
+vi.mock('../services/midtrans.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  createQrisCharge: vi.fn(async ({ orderId, amount }) => ({
+    status_code: '201',
+    transaction_id: 'tx-qris-1',
+    order_id: orderId,
+    gross_amount: `${amount}.00`,
+    payment_type: 'qris',
+    transaction_status: 'pending',
+    qr_string: 'QR-STRING-TEST',
+    expiry_time: '2026-11-26 11:27:33',
+  })),
+}));
 
 const app = createApp();
 const cookieOf = (res) => res.headers['set-cookie'][0];
@@ -64,16 +79,46 @@ describe('POST /api/orders', () => {
     expect(res.body.data.id.endsWith('-0002')).toBe(true);
   });
 
-  it('menerima QRIS tanpa uang tunai dan menyimpan metode QRIS', async () => {
+  it('membuat QRIS lewat Midtrans dan menunggu pelunasan', async () => {
     const res = await request(app)
       .post('/api/orders')
       .set('Cookie', cashierCookie)
       .send(body([{ productId: 'm1', qty: 1 }], { payment: 'QRIS', receivedAmount: undefined }));
+
     expect(res.status).toBe(201);
-    expect(res.body.data.payment).toBe('QRIS');
+    expect(res.body.data).toMatchObject({
+      payment: 'QRIS',
+      status: 'menunggu',
+      queue: '001',
+      qr: { string: 'QR-STRING-TEST' },
+    });
+
     const payment = await prisma.payment.findFirstOrThrow();
-    expect(payment.method).toBe('QRIS');
-    expect(payment.receivedAmount).toBeNull();
+    expect(payment).toMatchObject({
+      method: 'QRIS',
+      status: 'PENDING',
+      midtransOrderId: `${res.body.data.id}-1`,
+      midtransTransactionId: 'tx-qris-1',
+      qrString: 'QR-STRING-TEST',
+      receivedAmount: null,
+    });
+    expect(payment.expiresAt.toISOString()).toBe('2026-11-26T04:27:33.000Z');
+
+    const today = await request(app).get('/api/orders').set('Cookie', cashierCookie);
+    expect(today.body.data).toEqual([]);
+  });
+
+  it('membatalkan pesanan bila Midtrans menolak membuat pembayaran', async () => {
+    createQrisCharge.mockRejectedValueOnce(new Error('qris is not enabled'));
+
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Cookie', cashierCookie)
+      .send(body([{ productId: 'm1', qty: 1 }], { payment: 'QRIS', receivedAmount: undefined }));
+
+    expect(res.status).toBe(502);
+    expect(await prisma.payment.findFirstOrThrow()).toMatchObject({ status: 'FAILED' });
+    expect(await prisma.order.findFirstOrThrow()).toMatchObject({ status: 'CANCELLED' });
   });
 
   it('menolak uang tunai yang kurang dari total', async () => {

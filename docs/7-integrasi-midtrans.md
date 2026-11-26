@@ -1,50 +1,64 @@
-# Midtrans — Status Implementasi
+# Midtrans — QRIS Core API
 
-## 1. Status Saat Ini
+## 1. Alur yang Dipakai
 
-Integrasi Midtrans **belum diimplementasikan**. Kode backend belum memanggil Midtrans Core API
-atau Snap, belum menyediakan endpoint callback, dan belum memverifikasi signature webhook.
-Frontend menampilkan QR buatan lokal dengan payload `QRIS-MOCK|...`; kasir menyelesaikan
-simulasi dengan tombol “Simulasikan: pembayaran diterima”.
+Pembayaran QRIS memakai **Core API QRIS** (`POST /v2/charge`, `payment_type: "qris"`), bukan
+Snap. Alasannya: kasir menampilkan QR di layar sendiri, sementara Snap mengarahkan pelanggan ke
+halaman pembayaran terpisah.
 
-Saat tombol tersebut digunakan, frontend mengirim `payment: "QRIS"` ke `POST /api/orders`.
-Backend menyimpan order dengan payment status `PAID` serta status order `READY`. Perilaku ini
-adalah simulasi, bukan bukti bahwa pelanggan telah membayar.
+Alur lengkap:
 
-## 2. Konfigurasi yang Sudah Ada
+1. Kasir memilih QRIS di modal pembayaran.
+2. `POST /api/orders` menyimpan order berstatus `UNPAID` dan payment `PENDING`, lalu meminta
+   charge ke Midtrans dengan `midtransOrderId` `{kodeOrder}-{attemptNo}`.
+3. Respons order membawa `qr.string` (payload QRIS) dan `qr.expiresAt`. Frontend merender QR
+   dengan `qrcode.react`.
+4. Pembayaran lunas terdeteksi dari dua jalur:
+   - webhook `POST /api/payments/midtrans/notification` (produksi);
+   - polling `GET /api/orders/:code/payment` (dipakai frontend, wajib untuk development lokal
+     yang tidak punya URL publik).
+5. Saat `settlement`/`capture`, payment menjadi `PAID`, order menjadi `READY`, `paidAt` diisi,
+   dan order disiarkan ke layar dapur. `expire`/`cancel`/`deny`/`failure` membatalkan order.
 
-Environment backend menerima variabel berikut:
+## 2. Endpoint
+
+| Method | Path | Akses | Keterangan |
+|---|---|---|---|
+| POST | `/api/orders` | `CASHIER` | `payment: "QRIS"` membuat charge Midtrans dan mengembalikan `qr` |
+| GET | `/api/orders/:code/payment` | Sesi aktif | Menanyakan status ke Midtrans lalu menyinkronkan database |
+| POST | `/api/payments/midtrans/notification` | Publik, signature wajib | Webhook Midtrans |
+
+`GET /api/orders/:code/payment` mengembalikan `{ status, tx }`. `tx` berisi transaksi bila
+statusnya `PAID`; status lain hanya mengembalikan `status`, dan frontend berhenti menunggu saat
+mendapat `EXPIRED`, `FAILED`, atau `CANCELLED`.
+
+## 3. Verifikasi dan Idempotensi
+
+- Webhook diverifikasi dengan `SHA512(order_id + status_code + gross_amount + server key)`
+  memakai `timingSafeEqual`. Signature salah ditolak HTTP 403.
+- Jumlah `gross_amount` harus sama dengan `Payment.amount`, dan `transaction_id` harus cocok
+  dengan yang diterima saat charge.
+- Hanya baris payment berstatus `PENDING` yang boleh berubah (`updateMany` dengan syarat itu),
+  sehingga notifikasi ganda atau polling yang berulang tidak membuat pembayaran kedua.
+- Status order tidak pernah dikirim klien; semua perubahan berasal dari gateway.
+
+## 4. Konfigurasi
 
 | Variabel | Keterangan |
 |---|---|
-| `MIDTRANS_SERVER_KEY` | Default kosong; belum digunakan oleh service |
-| `MIDTRANS_CLIENT_KEY` | Default kosong; belum digunakan oleh frontend |
-| `MIDTRANS_IS_PRODUCTION` | String `true`/`false`, default `false`; dikonversi ke boolean |
-| `MIDTRANS_EXPIRY_MINUTES` | Integer positif, default 15; belum digunakan oleh payment flow |
+| `MIDTRANS_SERVER_KEY` | Kunci server sandbox/production; wajib untuk QRIS |
+| `MIDTRANS_CLIENT_KEY` | Disimpan untuk kebutuhan kanal lain; belum dipakai frontend |
+| `MIDTRANS_IS_PRODUCTION` | `true` memakai `api.midtrans.com`, selain itu sandbox |
+| `MIDTRANS_EXPIRY_MINUTES` | Cadangan bila respons charge tidak membawa `expiry_time` |
 
-Konfigurasi tersedia bukan berarti gateway telah terhubung. Jangan memasukkan kredensial
-sebenarnya ke dokumentasi atau repository.
+Kredensial hanya ada di `backend/.env` (tidak masuk repo). URL webhook diatur di dashboard
+Midtrans: `https://<domain>/api/payments/midtrans/notification`.
 
-## 3. Field Database Terkait
+## 5. Pengujian
 
-Model `Payment` memiliki `midtransOrderId`, `midtransTransactionId`, `paymentType`,
-`snapToken`, `snapExpiresAt`, `rawPayload`, dan `failureReason`. Field-field tersebut belum
-dipakai untuk membuat atau memverifikasi pembayaran melalui Midtrans dalam alur yang tersedia.
-
-## 4. Endpoint Terkait yang Belum Ada
-
-Belum tersedia:
-
-- endpoint untuk meminta QR/pembayaran ke Midtrans;
-- endpoint callback/notifikasi pembayaran;
-- validasi signature dengan Server Key;
-- sinkronisasi status gateway ke `Payment`/`Order`;
-- endpoint status pembayaran atau polling status.
-
-## 5. Pekerjaan Sebelum Disebut Terintegrasi
-
-Implementasi mendatang perlu menentukan dan menguji alur gateway yang dipilih (misalnya
-Core API QRIS atau Snap), menyimpan referensi transaksi secara idempoten, memverifikasi
-notifikasi menggunakan mekanisme resmi Midtrans, menangani status berhasil/gagal/kedaluwarsa,
-serta memastikan callback tidak dapat menandai pembayaran lunas tanpa validasi. Spesifikasi
-teknis dan status akhir harus diperbarui setelah implementasi dan pengujian dilakukan.
+- `backend/src/services/midtrans.test.js` menguji signature valid, payload yang diubah, dan
+  signature rusak.
+- `backend/src/routes/payments.test.js` menguji pelunasan, notifikasi ganda, signature salah,
+  jumlah tidak cocok, kedaluwarsa, polling, dan galat gateway.
+- Uji sandbox manual sudah dilakukan: charge QRIS nyata dari aplikasi lokal, polling
+  `PENDING`, lalu pelunasan lewat notifikasi bertanda tangan.

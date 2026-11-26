@@ -1,7 +1,10 @@
-import { badRequest, conflict } from '../lib/errors.js';
+import { env } from '../config/env.js';
+import { badGateway, badRequest, conflict, unavailable } from '../lib/errors.js';
+import { logger } from '../lib/logger.js';
 import { prisma } from '../lib/prisma.js';
 import { publishOrderCreated } from '../lib/realtime.js';
-import { businessDate, businessTime } from '../lib/wib.js';
+import { businessDate, businessTime, parseWibDateTime } from '../lib/wib.js';
+import { createQrisCharge } from './midtrans.js';
 import { orderTotal, priceLines } from './pricing.js';
 import { ensureOpenShift } from './shifts.js';
 
@@ -11,6 +14,7 @@ const orderTypeToDb = { dine: 'DINE_IN', take: 'TAKEAWAY' };
 const orderTypeFromDb = { DINE_IN: 'dine', TAKEAWAY: 'take' };
 const paymentToDb = { Cash: 'CASH', QRIS: 'QRIS' };
 const paymentFromDb = { CASH: 'Cash', QRIS: 'QRIS', MIDTRANS: 'QRIS' };
+const orderStatusFromDb = { UNPAID: 'menunggu', READY: 'siap', COMPLETED: 'selesai', CANCELLED: 'batal' };
 
 const dayStart = (date) => new Date(`${date}T00:00:00.000Z`);
 const pad = (value) => String(value).padStart(3, '0');
@@ -33,7 +37,7 @@ export function toTx(order) {
     })),
     note: order.note ?? '',
     total: order.totalAmount,
-    status: order.status === 'COMPLETED' ? 'selesai' : 'siap',
+    status: orderStatusFromDb[order.status] ?? 'batal',
     cashier: order.cashier.name,
     createdAt: paidAt.getTime(),
   };
@@ -60,11 +64,40 @@ async function priceOrder(items) {
   return priceLines(items, byId).map((line, index) => ({ ...line, note: items[index].note }));
 }
 
-export async function createPaidOrder({ cashier, input, at = new Date() }) {
+async function startQrisPayment(order) {
+  const payment = order.payments[0];
+  try {
+    const charge = await createQrisCharge({ orderId: payment.midtransOrderId, amount: order.totalAmount });
+    if (!charge.qr_string) throw new Error('Midtrans tidak mengembalikan QR string');
+    const updated = await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        midtransTransactionId: charge.transaction_id,
+        paymentType: charge.payment_type,
+        qrString: charge.qr_string,
+        rawPayload: charge,
+        expiresAt: charge.expiry_time
+          ? parseWibDateTime(charge.expiry_time)
+          : new Date(Date.now() + env.MIDTRANS_EXPIRY_MINUTES * 60_000),
+      },
+    });
+    return { ...toTx(order), qr: { string: updated.qrString, expiresAt: updated.expiresAt } };
+  } catch (err) {
+    await prisma.$transaction([
+      prisma.payment.update({ where: { id: payment.id }, data: { status: 'FAILED', failureReason: err.message } }),
+      prisma.order.update({ where: { id: order.id }, data: { status: 'CANCELLED' } }),
+    ]);
+    logger.error({ err }, 'gagal membuat pembayaran QRIS');
+    throw badGateway('Pembayaran QRIS gagal dibuat, coba lagi');
+  }
+}
+
+export async function createOrder({ cashier, input, at = new Date() }) {
   const lines = await priceOrder(input.items);
   const total = orderTotal(lines);
   const isCash = input.payment === 'Cash';
   if (isCash && (input.receivedAmount ?? 0) < total) throw badRequest('Uang diterima kurang dari total');
+  if (!isCash && !env.MIDTRANS_SERVER_KEY) throw unavailable('Pembayaran QRIS belum dikonfigurasi');
 
   // The JWT may carry yesterday's shiftId, so the shift is resolved again for the current business date.
   const shift = await ensureOpenShift(cashier.id, at);
@@ -87,12 +120,12 @@ export async function createPaidOrder({ cashier, input, at = new Date() }) {
             queueNumber: pad(dailySeq),
             businessDate: dayStart(date),
             orderType: orderTypeToDb[input.orderType],
-            status: 'READY',
+            status: isCash ? 'READY' : 'UNPAID',
             cashierId: cashier.id,
             shiftId: shift.id,
             totalAmount: total,
             note: input.note || null,
-            paidAt: at,
+            paidAt: isCash ? at : null,
             items: {
               create: lines.map((line) => ({
                 menuId: line.productId,
@@ -107,17 +140,19 @@ export async function createPaidOrder({ cashier, input, at = new Date() }) {
               create: {
                 attemptNo: 1,
                 method: paymentToDb[input.payment],
-                status: 'PAID',
+                status: isCash ? 'PAID' : 'PENDING',
                 amount: total,
                 receivedAmount: isCash ? input.receivedAmount : null,
                 changeAmount: isCash ? input.receivedAmount - total : null,
-                paidAt: at,
+                paidAt: isCash ? at : null,
+                midtransOrderId: isCash ? null : `${code}-1`,
               },
             },
           },
           include: { items: true, payments: true, cashier: { select: { name: true } } },
         });
       });
+      if (!isCash) return await startQrisPayment(order);
       const txOrder = toTx(order);
       publishOrderCreated(txOrder);
       return txOrder;

@@ -49,6 +49,7 @@ Semua endpoint memerlukan sesi valid.
 |---|---|---|---|---|
 | GET | `/api/orders` | Pemilik: tanggal opsional; kasir: hari ini saja | `?date=YYYY-MM-DD` | Daftar order `READY`/`COMPLETED` pada tanggal bisnis |
 | POST | `/api/orders` | `CASHIER` | `orderType`, `payment`, `items`, opsional `receivedAmount`, `note` | Order baru, HTTP 201 |
+| GET | `/api/orders/:code/payment` | Sesi aktif | — | Status pembayaran QRIS dan transaksi bila lunas |
 
 Struktur request pembuatan order:
 
@@ -75,11 +76,18 @@ diperbaiki dan diuji.
 Response order dipetakan ke format transaksi frontend: `id`, `date`, `time`, `queue`,
 `orderType`, `payment`, `items`, `note`, `total`, `status`, `cashier`, `createdAt`.
 
-Semua order yang dibuat route ini langsung tersimpan dengan status `READY` dan payment
-`PAID`. Pembayaran QRIS di route ini tidak menunggu gateway.
+Semua order tunai langsung tersimpan dengan status `READY` dan payment `PAID`. Order QRIS
+disimpan `UNPAID`/`PENDING`, memanggil Midtrans Core API, dan mengembalikan `qr.string` serta
+`qr.expiresAt`; pelunasan datang dari webhook atau polling. Bila charge gagal, order menjadi
+`CANCELLED`, payment `FAILED`, dan route membalas HTTP 502.
+
+`GET /api/orders/:code/payment` mengembalikan `{ status, tx }`; `tx` hanya diisi saat status
+`PAID`. Detail alur, signature dan idempotensi ada di `7-integrasi-midtrans.md`.
+
+Webhook `POST /api/payments/midtrans/notification` bersifat publik dan diautentikasi dengan
+signature SHA-512, bukan sesi.
 
 ## 6. Route yang Belum Tersedia
 
-Belum ada endpoint untuk CRUD menu/kategori, mengubah status order, menerima callback Midtrans,
-mengecek status pembayaran, atau menghasilkan laporan. Keberadaan model di Prisma tidak berarti
-endpoint tersebut tersedia.
+Belum ada endpoint untuk CRUD menu/kategori, mengubah status order, atau menghasilkan laporan.
+Keberadaan model di Prisma tidak berarti endpoint tersebut tersedia.
