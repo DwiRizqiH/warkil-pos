@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { vi } from 'vitest';
 import OwnerCashiers from './OwnerCashiers.jsx';
 
@@ -44,15 +44,16 @@ test('owner can add, rename, deactivate, and change a cashier PIN', async () => 
   fireEvent.click(screen.getByRole('button', { name: 'Simpan' }));
   expect(await screen.findByText('Budi Santoso')).toBeTruthy();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Ubah nama' }));
+  const sitiCard = () => screen.getByRole('heading', { name: /siti rahma/i }).closest('section');
+  fireEvent.click(within(sitiCard()).getByRole('button', { name: 'Ubah nama' }));
   fireEvent.change(screen.getByLabelText('Nama kasir'), { target: { value: 'Siti Rahmawati' } });
   fireEvent.click(screen.getByRole('button', { name: 'Simpan' }));
   expect(await screen.findByText('Siti Rahmawati')).toBeTruthy();
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'Nonaktifkan' })[0]);
+  fireEvent.click(within(sitiCard()).getByRole('button', { name: 'Nonaktifkan' }));
   await waitFor(() => expect(screen.getByText('Nonaktif')).toBeTruthy());
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'Ganti PIN' })[0]);
+  fireEvent.click(within(sitiCard()).getByRole('button', { name: 'Ganti PIN' }));
   fireEvent.change(screen.getByLabelText('PIN 4 digit'), { target: { value: '4321' } });
   fireEvent.click(screen.getByRole('button', { name: 'Simpan' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
