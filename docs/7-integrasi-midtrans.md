@@ -38,6 +38,10 @@ mendapat `EXPIRED`, `FAILED`, atau `CANCELLED`.
   memakai `timingSafeEqual`. Signature salah ditolak HTTP 403.
 - Jumlah `gross_amount` harus sama dengan `Payment.amount`, dan `transaction_id` harus cocok
   dengan yang diterima saat charge.
+- Pelunasan hanya diterima dari notifikasi berstatus code `200`; capture dengan fraud
+  `deny` menghasilkan `FAILED`, bukan `PAID`.
+- `GET /api/orders/:code/payment` memakai batas tanggal bisnis yang sama dengan daftar order:
+  kasir hanya boleh membuka pesanan hari ini.
 - Hanya baris payment berstatus `PENDING` yang boleh berubah (`updateMany` dengan syarat itu),
   sehingga notifikasi ganda atau polling yang berulang tidak membuat pembayaran kedua.
 - Status order tidak pernah dikirim klien; semua perubahan berasal dari gateway.

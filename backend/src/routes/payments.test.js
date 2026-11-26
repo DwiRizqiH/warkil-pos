@@ -131,6 +131,26 @@ describe('POST /api/payments/midtrans/notification', () => {
     expect(await prisma.payment.findFirstOrThrow()).toMatchObject({ status: 'PENDING' });
   });
 
+  it('menolak pelunasan yang status code-nya bukan 200', async () => {
+    const order = await createQrisOrder();
+    const res = await request(app)
+      .post('/api/payments/midtrans/notification')
+      .send(notification(`${order.id}-1`, { status_code: '201' }));
+    expect(res.status).toBe(400);
+    expect(await prisma.payment.findFirstOrThrow()).toMatchObject({ status: 'PENDING' });
+  });
+
+  it('membatalkan pesanan saat capture ditolak fraud', async () => {
+    const order = await createQrisOrder();
+    const res = await request(app)
+      .post('/api/payments/midtrans/notification')
+      .send(notification(`${order.id}-1`, { transaction_status: 'capture', fraud_status: 'deny' }));
+
+    expect(res.status).toBe(200);
+    expect(await prisma.payment.findFirstOrThrow()).toMatchObject({ status: 'FAILED' });
+    expect(await prisma.order.findUniqueOrThrow({ where: { code: order.id } })).toMatchObject({ status: 'CANCELLED' });
+  });
+
   it('membatalkan pesanan saat QR kedaluwarsa', async () => {
     const order = await createQrisOrder();
     const res = await request(app)
@@ -177,5 +197,30 @@ describe('GET /api/orders/:code/payment', () => {
   it('menolak permintaan tanpa sesi', async () => {
     const order = await createQrisOrder();
     expect((await request(app).get(`/api/orders/${order.id}/payment`)).status).toBe(401);
+  });
+
+  it('menolak kasir membuka pembayaran dari tanggal lain', async () => {
+    const cashier = await prisma.user.findFirstOrThrow({ where: { role: 'CASHIER' } });
+    const businessDate = new Date('2026-01-01T00:00:00.000Z');
+    const shift = await prisma.shift.create({ data: { cashierId: cashier.id, businessDate } });
+    const order = await prisma.order.create({
+      data: {
+        code: 'TRX-20260101-0001',
+        dailySeq: 1,
+        queueNumber: '001',
+        businessDate,
+        orderType: 'DINE_IN',
+        status: 'UNPAID',
+        cashierId: cashier.id,
+        shiftId: shift.id,
+        totalAmount: 20000,
+        payments: {
+          create: { attemptNo: 1, method: 'QRIS', status: 'PENDING', amount: 20000, midtransOrderId: 'OLD-1' },
+        },
+      },
+    });
+
+    const res = await request(app).get(`/api/orders/${order.code}/payment`).set('Cookie', cashierCookie);
+    expect(res.status).toBe(403);
   });
 });

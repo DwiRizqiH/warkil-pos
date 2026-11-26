@@ -1,7 +1,8 @@
-import { badRequest, notFound } from '../lib/errors.js';
+import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 import { prisma } from '../lib/prisma.js';
 import { publishOrderCreated } from '../lib/realtime.js';
+import { businessDate } from '../lib/wib.js';
 import { getTransactionStatus } from './midtrans.js';
 import { toTx } from './orders.js';
 
@@ -15,7 +16,10 @@ const statusByTransaction = {
 };
 
 function paymentStatusOf({ transaction_status, fraud_status }) {
-  if (transaction_status === 'capture' && fraud_status === 'challenge') return 'PENDING';
+  if (transaction_status === 'capture') {
+    if (fraud_status === 'challenge') return 'PENDING';
+    if (fraud_status === 'deny') return 'FAILED';
+  }
   return statusByTransaction[transaction_status] ?? 'PENDING';
 }
 
@@ -34,6 +38,8 @@ export async function applyMidtransStatus(payload) {
 
   const status = paymentStatusOf(payload);
   if (status === 'PENDING') return null;
+  // A settlement must carry the gateway's success status code; other codes cannot grant value.
+  if (status === 'PAID' && payload.status_code !== '200') throw badRequest('Status notifikasi tidak valid');
 
   const paidAt = status === 'PAID' ? new Date() : null;
 
@@ -66,12 +72,16 @@ export async function applyMidtransStatus(payload) {
   return toTx(current);
 }
 
-export async function refreshQrisPayment(orderCode) {
+export async function refreshQrisPayment({ code, auth }) {
   const order = await prisma.order.findUnique({
-    where: { code: orderCode },
+    where: { code },
     include: { payments: { orderBy: { attemptNo: 'desc' } }, items: true, cashier: { select: { name: true } } },
   });
   if (!order) throw notFound('Pesanan tidak ditemukan');
+  // Same gate as GET /orders: a cashier may only look at today's business date.
+  if (auth.role !== 'OWNER' && order.businessDate.toISOString().slice(0, 10) !== businessDate()) {
+    throw forbidden('Kasir hanya dapat melihat pesanan hari ini');
+  }
 
   const payment = order.payments[0];
   if (!payment?.midtransOrderId || payment.status !== 'PENDING') {

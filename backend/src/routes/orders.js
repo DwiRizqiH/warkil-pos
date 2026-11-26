@@ -52,7 +52,7 @@ ordersRouter.post('/', requireRole('CASHIER'), validate({ body: createBody }), a
 
 ordersRouter.get('/:code/payment', async (req, res, next) => {
   try {
-    ok(res, await refreshQrisPayment(req.params.code));
+    ok(res, await refreshQrisPayment({ code: req.params.code, auth: req.auth }));
   } catch (err) {
     next(err);
   }
