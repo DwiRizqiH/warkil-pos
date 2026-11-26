@@ -79,6 +79,6 @@ backend tetap dapat melayani API dan static serving dilewati.
 ## 7. Hal yang Belum Ada
 
 - Lapisan controller/repository terpisah.
-- API backend untuk menu, kategori, laporan, atau pembaruan status pesanan.
+- API backend untuk laporan atau pembaruan status pesanan.
 - Pembatalan QRIS dari aplikasi dan rekonsiliasi ulang transaksi yang sudah lunas.
 - Kesesuaian penuh data demo frontend dengan database.

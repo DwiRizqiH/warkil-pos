@@ -43,24 +43,29 @@ export function toTx(order) {
   };
 }
 
-async function priceOrder(items) {
-  const menus = await prisma.menu.findMany({
-    where: { id: { in: [...new Set(items.map((item) => item.productId))] }, deletedAt: null },
+const pricedMenu = (menu) => ({
+  id: menu.id,
+  name: menu.name,
+  price: menu.price,
+  discountPct: menu.discountPercent,
+  isBundle: menu.category.isBundle,
+  components: menu.components,
+});
+
+async function loadPricedMenus(ids) {
+  return prisma.menu.findMany({
+    where: { id: { in: ids }, deletedAt: null },
     include: { components: true, category: { select: { isBundle: true } } },
   });
-  const byId = new Map(
-    menus.map((menu) => [
-      menu.id,
-      {
-        id: menu.id,
-        name: menu.name,
-        price: menu.price,
-        discountPct: menu.discountPercent,
-        isBundle: menu.category.isBundle,
-        components: menu.components,
-      },
-    ])
-  );
+}
+
+async function priceOrder(items) {
+  const menus = await loadPricedMenus([...new Set(items.map((item) => item.productId))]);
+  const byId = new Map(menus.map((menu) => [menu.id, pricedMenu(menu)]));
+  // A bundle's price comes from its components, which are not part of the ordered ids.
+  const missing = [...new Set(menus.flatMap((menu) => menu.components.map((part) => part.componentId)))]
+    .filter((id) => !byId.has(id));
+  for (const menu of await loadPricedMenus(missing)) byId.set(menu.id, pricedMenu(menu));
   return priceLines(items, byId).map((line, index) => ({ ...line, note: items[index].note }));
 }
 

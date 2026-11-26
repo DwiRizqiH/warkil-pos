@@ -61,7 +61,7 @@ Unique constraints dan primary keys seperti pada bagian 3 juga dibuat di databas
 - `POST /api/orders` menyimpan pembayaran tunai langsung sebagai `PAID`. Pembayaran QRIS
   menyimpan order `UNPAID` dan payment `PENDING` sampai gateway melaporkan `settlement`;
   `qrString` dan `expiresAt` menyimpan payload QR beserta masa berlakunya.
-- API yang aktif belum melakukan CRUD pada model `Menu`, `Category`, `CalendarMark`, dan
-  `Setting`.
+- API aktif melakukan CRUD `Menu` dan `Category`; `MenuComponent` dipakai untuk harga paket.
+  `CalendarMark` dan `Setting` masih belum dipakai endpoint.
 - `Payment.rawPayload` menyimpan payload terakhir dari Midtrans untuk penelusuran.
 - Nilai uang pada model aktif adalah integer, bukan `Decimal`.

@@ -34,4 +34,17 @@ describe('seedBase', () => {
     expect(await prisma.menu.count()).toBe(11);
     expect(await prisma.user.count({ where: { role: 'CASHIER' } })).toBe(3);
   });
+
+  it('tidak menimpa nama atau harga yang sudah diubah pemilik', async () => {
+    await seedBase();
+    await prisma.menu.update({ where: { id: 'd1' }, data: { name: 'Es Teh Manis', price: 2500 } });
+    await prisma.category.update({ where: { id: 'minuman' }, data: { name: 'Minuman Dingin' } });
+
+    await seedBase();
+
+    const menu = await prisma.menu.findUniqueOrThrow({ where: { id: 'd1' } });
+    expect(menu.name).toBe('Es Teh Manis');
+    expect(menu.price).toBe(2500);
+    expect((await prisma.category.findUniqueOrThrow({ where: { id: 'minuman' } })).name).toBe('Minuman Dingin');
+  });
 });

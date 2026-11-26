@@ -43,7 +43,7 @@ frontend/src/
 
 | Data | Sumber aktual |
 |---|---|
-| Menu dan kategori | Default di `data.js`, perubahan disimpan ke `localStorage` |
+| Menu dan kategori | API `/api/menus`; perubahan pemilik disimpan ke database |
 | Penanda kalender dan opsi Minggu libur | `localStorage` |
 | Riwayat sebelum hari ini | Dibuat lokal oleh `generateHistory` sebagai data demo |
 | Sesi login | Endpoint backend; JWT tersimpan sebagai cookie `httpOnly` |

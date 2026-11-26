@@ -125,6 +125,29 @@ describe('POST /api/orders', () => {
     expect(await prisma.order.findFirstOrThrow()).toMatchObject({ status: 'CANCELLED' });
   });
 
+  it('menghitung harga paket dari komponen yang tidak ikut dipesan', async () => {
+    await prisma.menu.create({ data: { id: 'm2', categoryId: 'makanan', name: 'Kerupuk', price: 1000 } });
+    await prisma.category.create({ data: { id: 'paket', name: 'Menu Paket', sortOrder: 1, isBundle: true } });
+    await prisma.menu.create({
+      data: {
+        id: 'b1',
+        categoryId: 'paket',
+        name: 'Paket Berdua',
+        discountPercent: 10,
+        components: { create: [{ componentId: 'm1', qty: 2 }, { componentId: 'm2', qty: 1 }] },
+      },
+    });
+
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Cookie', cashierCookie)
+      .send(body([{ productId: 'b1', qty: 1 }]));
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.total).toBe(36900);
+    expect(res.body.data.items[0]).toMatchObject({ id: 'b1', price: 36900 });
+  });
+
   it('menolak uang tunai yang kurang dari total', async () => {
     const res = await request(app)
       .post('/api/orders')

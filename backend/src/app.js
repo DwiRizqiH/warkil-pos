@@ -27,7 +27,8 @@ export function createApp() {
   // Menu photos are pasted as remote https URLs, so the default img-src would blank them.
   app.use(helmet({ contentSecurityPolicy: { directives: { 'img-src': ["'self'", 'data:', 'https:'] } } }));
   app.use(pinoHttp({ logger }));
-  app.use(express.json({ limit: '100kb' }));
+  // Menu photos arrive as data URLs from the owner form, so the default 100kb body is too small.
+  app.use(express.json({ limit: '2mb' }));
   app.use(cookieParser());
   // The Midtrans dashboard tests the URL from the browser, so that one route needs a CORS
   // exception; webhook calls themselves are server-to-server and carry no Origin.

@@ -3,6 +3,7 @@ import MenuCard from '../../components/MenuCard.jsx';
 import Modal from '../../components/Modal.jsx';
 import Icon from '../../components/Icon.jsx';
 import { useStore } from '../../store.jsx';
+import { api } from '../../api/client.js';
 import { grossOf, priceOf } from '../../data.js';
 import { menusForCategory } from '../../selectors.js';
 import { rupiah } from '../../utils.js';
@@ -57,8 +58,8 @@ function MenuForm({ initial, defaultCat, menus, categories, onSave, onClose }) {
         }
       : { name: '', cat: defaultCat, emoji: '🍽️', image: '', price: '', discount: 10, items: [] }
   );
-  const isPaket = f.cat === 'paket';
-  const pool = menus.filter((m) => !m.items && m.id !== initial?.id);
+  const isPaket = Boolean(categories.find((c) => c.id === f.cat)?.isBundle);
+  const pool = menus.filter((m) => !m.isBundle && m.id !== initial?.id);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
 
   const draft = { items: f.items, discount: Number(f.discount) || 0 };
@@ -84,11 +85,11 @@ function MenuForm({ initial, defaultCat, menus, categories, onSave, onClose }) {
 
   const save = () => {
     const base = {
-      id: initial?.id || 'x' + Date.now(),
+      ...(initial?.id ? { id: initial.id } : {}),
       name: f.name.trim(),
       cat: f.cat,
       emoji: f.emoji || '🍽️',
-      image: f.image.trim() || undefined,
+      image: f.image.trim() || null,
     };
     onSave(isPaket ? { ...base, items: f.items, discount: Number(f.discount) || 0 } : { ...base, price: Number(f.price) });
   };
@@ -223,25 +224,64 @@ function MenuForm({ initial, defaultCat, menus, categories, onSave, onClose }) {
   );
 }
 
-function CategoryManager({ categories, menus, setCategories, onClose }) {
+function CategoryManager({ categories, menus, refreshMenus, onClose }) {
   const [name, setName] = useState('');
+  const [drafts, setDrafts] = useState({});
+  const [error, setError] = useState('');
   const countOf = (id) => menus.filter((m) => m.cat === id).length;
+
+  const rename = async (category) => {
+    const next = (drafts[category.id] ?? category.name).trim();
+    if (!next || next === category.name) return;
+    try {
+      await api.patch(`/categories/${category.id}`, { name: next });
+      await refreshMenus();
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const remove = async (category) => {
+    try {
+      await api.del(`/categories/${category.id}`);
+      await refreshMenus();
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const add = async () => {
+    if (!name.trim()) return;
+    try {
+      await api.post('/categories', { name: name.trim() });
+      setName('');
+      await refreshMenus();
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   return (
     <Modal title="Kelola Kategori" onClose={onClose} footer={<button className="btn btn-dark" onClick={onClose}>Selesai</button>}>
       <div className="stack">
+        {error && <p className="form-error" role="alert">{error}</p>}
         {categories.map((c) => (
           <div key={c.id} className="cat-row">
             <input
               className="input"
-              value={c.name}
-              onChange={(e) => setCategories((prev) => prev.map((x) => (x.id === c.id ? { ...x, name: e.target.value } : x)))}
+              value={drafts[c.id] ?? c.name}
+              onChange={(e) => setDrafts((prev) => ({ ...prev, [c.id]: e.target.value }))}
+              onBlur={() => rename(c)}
             />
             <span className="muted sm">{countOf(c.id)} menu</span>
             <button
               className="icon-btn sm"
               disabled={countOf(c.id) > 0}
               title={countOf(c.id) > 0 ? 'Kosongkan kategori dulu sebelum dihapus' : 'Hapus kategori'}
-              onClick={() => setCategories((prev) => prev.filter((x) => x.id !== c.id))}
+              onClick={() => remove(c)}
             >
               <Icon name="trash" size={18} />
             </button>
@@ -249,14 +289,7 @@ function CategoryManager({ categories, menus, setCategories, onClose }) {
         ))}
         <div className="cat-row">
           <input className="input" placeholder="Nama kategori baru" value={name} onChange={(e) => setName(e.target.value)} />
-          <button
-            className="btn btn-primary"
-            disabled={!name.trim()}
-            onClick={() => {
-              setCategories((prev) => [...prev, { id: 'c' + Date.now(), name: name.trim() }]);
-              setName('');
-            }}
-          >
+          <button className="btn btn-primary" disabled={!name.trim()} onClick={add}>
             Tambah
           </button>
         </div>
@@ -267,21 +300,42 @@ function CategoryManager({ categories, menus, setCategories, onClose }) {
 }
 
 export default function OwnerMenu() {
-  const { menus, setMenus, categories, setCategories, best, hasMonthData, dataDays } = useStore();
+  const { menus, categories, best, hasMonthData, dataDays, refreshMenus } = useStore();
   const [catId, setCatId] = useState('all');
   const [form, setForm] = useState(null); // { menu? }
   const [del, setDel] = useState(null);
   const [catModal, setCatModal] = useState(false);
+  const [error, setError] = useState('');
 
   const rank = useMemo(() => new Map(best.map((b) => [b.id, b])), [best]);
   const catOrder = useMemo(() => new Map(categories.map((c, i) => [c.id, i])), [categories]);
   const list = useMemo(() => menusForCategory(menus, catId, rank, catOrder), [menus, catId, rank, catOrder]);
   // "Semua" tab: start on a single-item category so the add form opens with price, not package builder.
-  const defaultCat = catId === 'all' ? (categories.find((c) => c.id !== 'paket')?.id ?? categories[0]?.id) : catId;
+  const defaultCat = catId === 'all'
+    ? (categories.find((c) => !c.isBundle)?.id ?? categories[0]?.id)
+    : catId;
 
-  const save = (menu) => {
-    setMenus((prev) => (prev.some((m) => m.id === menu.id) ? prev.map((m) => (m.id === menu.id ? menu : m)) : [...prev, menu]));
-    setForm(null);
+  const save = async (menu) => {
+    try {
+      if (menu.id) await api.patch(`/menus/${menu.id}`, menu);
+      else await api.post('/menus', menu);
+      await refreshMenus();
+      setError('');
+      setForm(null);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const removeMenu = async () => {
+    try {
+      await api.del(`/menus/${del.id}`);
+      await refreshMenus();
+      setError('');
+      setDel(null);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -295,6 +349,8 @@ export default function OwnerMenu() {
           </button>
         </div>
       </div>
+
+      {error && <p className="form-error" role="alert">{error}</p>}
 
       <section className="card card-pad stack">
         <div className="spread wrap">
@@ -373,7 +429,7 @@ export default function OwnerMenu() {
         />
       )}
       {catModal && (
-        <CategoryManager categories={categories} menus={menus} setCategories={setCategories} onClose={() => setCatModal(false)} />
+        <CategoryManager categories={categories} menus={menus} refreshMenus={refreshMenus} onClose={() => setCatModal(false)} />
       )}
       {del && (
         <Modal
@@ -382,13 +438,7 @@ export default function OwnerMenu() {
           footer={
             <>
               <button className="btn btn-ghost" onClick={() => setDel(null)}>Batal</button>
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  setMenus((prev) => prev.filter((m) => m.id !== del.id));
-                  setDel(null);
-                }}
-              >
+              <button className="btn btn-primary" onClick={removeMenu}>
                 Ya, hapus
               </button>
             </>

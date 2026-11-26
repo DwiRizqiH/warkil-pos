@@ -8,11 +8,11 @@ Dokumen ini menggambarkan kode yang ada, bukan seluruh rancangan awal.
 
 Implementasi masih berupa gabungan fitur demo dan fitur yang tersambung ke backend:
 
-- Login pemilik/kasir, pengelolaan akun kasir, shift, dan pesanan menggunakan API serta
-  database.
-- Menu, kategori, kalender, beberapa perubahan status transaksi, dan sebagian data riwayat
-  dikelola frontend di `localStorage` atau dibuat sebagai data demo.
-- Pembayaran QRIS pada UI adalah simulasi. Belum ada pemanggilan Midtrans atau webhook.
+- Login pemilik/kasir, pengelolaan akun kasir, shift, pesanan, serta menu dan kategori
+  menggunakan API serta database.
+- Kalender, beberapa perubahan status transaksi, dan sebagian data riwayat masih dikelola
+  frontend di `localStorage` atau dibuat sebagai data demo.
+- Pembayaran QRIS memakai Midtrans Core API dengan webhook bertanda tangan.
 
 Karena itu, data demo yang terlihat pada laporan atau dashboard tidak selalu berasal dari
 database produksi. Lihat `3-frontend-struktur-halaman.md` dan `7-integrasi-midtrans.md`.

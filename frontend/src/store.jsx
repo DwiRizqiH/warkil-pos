@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { DEFAULT_CATEGORIES, DEFAULT_MENUS, generateHistory } from './data.js';
+import { api } from './api/client.js';
+import { useAuth } from './auth/AuthContext.jsx';
+import { DEFAULT_MENUS, generateHistory } from './data.js';
 import { bestSellers, buildIndex } from './selectors.js';
 import { daysBetween, parseYmd, useNow, ymd } from './utils.js';
 
@@ -51,14 +53,34 @@ function usePersist(key, init) {
 const BASE = generateHistory(DEFAULT_MENUS, new Date());
 
 export function StoreProvider({ children }) {
-  const [menus, setMenus] = usePersist('menus', DEFAULT_MENUS);
-  const [categories, setCategories] = usePersist('cats', DEFAULT_CATEGORIES);
+  const { user } = useAuth();
+  // Menus and categories live in the database; the browser only keeps personal UI state.
+  const [menus, setMenus] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [menusLoading, setMenusLoading] = useState(true);
   const [marks, setMarks] = usePersist('marks', {});
   const [sundayOff, setSundayOff] = usePersist('sundayOff', false);
   const [overrides, setOverrides] = usePersist('overrides', {});
   const [serverTx, setServerTx] = useState([]);
   const now = useNow(15000);
   const todayStr = ymd(now);
+
+  const refreshMenus = useCallback(async () => {
+    const data = await api.get('/menus');
+    setMenus(data.menus);
+    setCategories(data.categories);
+    setMenusLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setMenus([]);
+      setCategories([]);
+      setMenusLoading(false);
+      return;
+    }
+    refreshMenus().catch(() => setMenusLoading(false));
+  }, [user, refreshMenus]);
 
   const baseApplied = useMemo(
     () => BASE.map((t) => (overrides[t.id] ? { ...t, ...overrides[t.id] } : t)),
@@ -107,12 +129,14 @@ export function StoreProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      menus, setMenus, categories, setCategories, marks, setMarks, sundayOff, setSundayOff,
+      menus, categories, menusLoading, refreshMenus,
+      marks, setMarks, sundayOff, setSundayOff,
       getMark, allTx, index, now, mergeServerOrders, updateTx,
       best, hasMonthData, dataDays,
     }),
     [
-      menus, setMenus, categories, setCategories, marks, setMarks, sundayOff, setSundayOff,
+      menus, categories, menusLoading, refreshMenus,
+      marks, setMarks, sundayOff, setSundayOff,
       getMark, allTx, index, now, mergeServerOrders, updateTx, best, hasMonthData, dataDays,
     ]
   );
