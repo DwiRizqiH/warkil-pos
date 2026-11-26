@@ -81,7 +81,8 @@ async function startQrisPayment(order) {
           : new Date(Date.now() + env.MIDTRANS_EXPIRY_MINUTES * 60_000),
       },
     });
-    return { ...toTx(order), qr: { string: updated.qrString, expiresAt: updated.expiresAt } };
+    const imageUrl = charge.actions?.find((action) => action.name === 'generate-qr-code')?.url ?? null;
+    return { ...toTx(order), qr: { string: updated.qrString, imageUrl, expiresAt: updated.expiresAt } };
   } catch (err) {
     await prisma.$transaction([
       prisma.payment.update({ where: { id: payment.id }, data: { status: 'FAILED', failureReason: err.message } }),

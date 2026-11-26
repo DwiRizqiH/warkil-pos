@@ -18,6 +18,7 @@ vi.mock('../services/midtrans.js', async (importOriginal) => ({
     transaction_status: 'pending',
     qr_string: 'QR-STRING-TEST',
     expiry_time: '2026-11-26 11:27:33',
+    actions: [{ name: 'generate-qr-code', method: 'GET', url: 'https://api.sandbox.midtrans.com/v2/qris/tx-qris-1/qr-code' }],
   })),
 }));
 
@@ -90,7 +91,10 @@ describe('POST /api/orders', () => {
       payment: 'QRIS',
       status: 'menunggu',
       queue: '001',
-      qr: { string: 'QR-STRING-TEST' },
+      qr: {
+        string: 'QR-STRING-TEST',
+        imageUrl: 'https://api.sandbox.midtrans.com/v2/qris/tx-qris-1/qr-code',
+      },
     });
 
     const payment = await prisma.payment.findFirstOrThrow();

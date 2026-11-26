@@ -11,8 +11,9 @@ Alur lengkap:
 1. Kasir memilih QRIS di modal pembayaran.
 2. `POST /api/orders` menyimpan order berstatus `UNPAID` dan payment `PENDING`, lalu meminta
    charge ke Midtrans dengan `midtransOrderId` `{kodeOrder}-{attemptNo}`.
-3. Respons order membawa `qr.string` (payload QRIS) dan `qr.expiresAt`. Frontend merender QR
-   dengan `qrcode.react`.
+3. Respons order membawa `qr.string` (payload QRIS), `qr.imageUrl` (URL PNG dari Midtrans untuk
+   simulator), dan `qr.expiresAt`. Frontend merender QR dengan `qrcode.react` dan menyediakan
+   tombol salin URL gambar.
 4. Pembayaran lunas terdeteksi dari dua jalur:
    - webhook `POST /api/payments/midtrans/notification` (produksi);
    - polling `GET /api/orders/:code/payment` (dipakai frontend, wajib untuk development lokal

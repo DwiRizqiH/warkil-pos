@@ -21,9 +21,19 @@ export default function PayModal({ onClose, onDone }) {
   const [receipt, setReceipt] = useState(false);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const total = cart.total;
   const rec = Number(received) || 0;
+
+  const copyQrImageUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(qr.imageUrl);
+      setCopied(true);
+    } catch {
+      setError('Browser menolak akses clipboard.');
+    }
+  };
 
   const finalizeCash = async () => {
     setPosting(true);
@@ -51,6 +61,7 @@ export default function PayModal({ onClose, onDone }) {
     try {
       const order = await api.post('/orders', { orderType: cart.orderType, payment: 'QRIS', items: linesOf(cart) });
       setQr(order.qr);
+      setCopied(false);
       setOrderCode(order.id);
     } catch (err) {
       setError(err.message);
@@ -176,6 +187,11 @@ export default function PayModal({ onClose, onDone }) {
               </>
             )}
             <div className="row end">
+              {qr?.imageUrl && (
+                <button className="btn btn-ghost" onClick={copyQrImageUrl}>
+                  {copied ? 'URL tersalin' : 'Salin URL gambar QR'}
+                </button>
+              )}
               <button className="btn btn-ghost" onClick={onClose} disabled={posting}>Tutup</button>
             </div>
           </div>
