@@ -9,6 +9,9 @@ const schema = z.object({
   JWT_SECRET: z.string().min(32, 'minimal 32 karakter'),
   FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),
   MIDTRANS_SERVER_KEY: z.string().default(''),
+  // Since 28 Oct 2026 Midtrans signs notifications with this key instead of the server key;
+  // the server key stays in use for Core API calls.
+  MIDTRANS_SIGNATURE_SECRET: z.string().default(''),
   MIDTRANS_CLIENT_KEY: z.string().default(''),
   // z.coerce.boolean() reads the string "false" as true; the enum forces an explicit value.
   MIDTRANS_IS_PRODUCTION: z

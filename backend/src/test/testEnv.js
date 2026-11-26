@@ -11,4 +11,5 @@ export const testEnv = {
   HOST: '127.0.0.1',
   MIDTRANS_IS_PRODUCTION: 'false',
   MIDTRANS_SERVER_KEY: 'SB-Mid-server-test',
+  MIDTRANS_SIGNATURE_SECRET: 'Mid-server-signature-test',
 };

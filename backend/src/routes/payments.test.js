@@ -28,7 +28,7 @@ const cookieOf = (res) => res.headers['set-cookie'][0];
 
 const sign = (payload) =>
   createHash('sha512')
-    .update(`${payload.order_id}${payload.status_code}${payload.gross_amount}${env.MIDTRANS_SERVER_KEY}`)
+    .update(`${payload.order_id}${payload.status_code}${payload.gross_amount}${env.MIDTRANS_SIGNATURE_SECRET}`)
     .digest('hex');
 
 const notification = (midtransOrderId, overrides = {}) => {

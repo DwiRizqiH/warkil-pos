@@ -32,6 +32,11 @@ Alur lengkap:
 statusnya `PAID`; status lain hanya mengembalikan `status`, dan frontend berhenti menunggu saat
 mendapat `EXPIRED`, `FAILED`, atau `CANCELLED`.
 
+Dashboard Midtrans menguji URL notifikasi dari browser saat konfigurasi disimpan. Route webhook
+karena itu mengizinkan origin dashboard (`dashboard.midtrans.com` dan
+`dashboard.sandbox.midtrans.com`) pada CORS tanpa kredensial. Notifikasi sebenarnya tetap
+server-to-server dan tidak memakai CORS.
+
 ## 3. Verifikasi dan Idempotensi
 
 - Webhook diverifikasi dengan `SHA512(order_id + status_code + gross_amount + server key)`
@@ -50,10 +55,14 @@ mendapat `EXPIRED`, `FAILED`, atau `CANCELLED`.
 
 | Variabel | Keterangan |
 |---|---|
-| `MIDTRANS_SERVER_KEY` | Kunci server sandbox/production; wajib untuk QRIS |
+| `MIDTRANS_SERVER_KEY` | Kunci server sandbox/production untuk memanggil Core API; wajib untuk QRIS |
+| `MIDTRANS_SIGNATURE_SECRET` | Kunci penanda tangan notifikasi (Signature Secret Key); sejak 28-10-2026 menggantikan server key pada formula SHA-512 |
 | `MIDTRANS_CLIENT_KEY` | Disimpan untuk kebutuhan kanal lain; belum dipakai frontend |
 | `MIDTRANS_IS_PRODUCTION` | `true` memakai `api.midtrans.com`, selain itu sandbox |
 | `MIDTRANS_EXPIRY_MINUTES` | Cadangan bila respons charge tidak membawa `expiry_time` |
+
+Signature memakai `MIDTRANS_SIGNATURE_SECRET` bila diisi; server key tetap diterima sebagai
+cadangan untuk akun yang notifikasinya masih ditandatangani dengan kunci lama.
 
 Kredensial hanya ada di `backend/.env` (tidak masuk repo). URL webhook diatur di dashboard
 Midtrans: `https://<domain>/api/payments/midtrans/notification`.

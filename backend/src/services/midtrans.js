@@ -43,13 +43,18 @@ export function getTransactionStatus(orderId) {
   return call(`/v2/${encodeURIComponent(orderId)}/status`);
 }
 
-// Midtrans signs order_id + status_code + gross_amount + server key with SHA-512; comparing raw
-// lengths first keeps timingSafeEqual from throwing on a malformed signature.
+// Midtrans signs order_id + status_code + gross_amount + secret with SHA-512. Accounts created
+// before the 28 Oct 2026 key change still sign with the server key, so both are accepted.
+const signatureKeys = () => [env.MIDTRANS_SIGNATURE_SECRET, env.MIDTRANS_SERVER_KEY].filter(Boolean);
+
 export function verifySignature({ order_id, status_code, gross_amount, signature_key }) {
-  if (!env.MIDTRANS_SERVER_KEY || typeof signature_key !== 'string') return false;
-  const expected = createHash('sha512')
-    .update(`${order_id}${status_code}${gross_amount}${env.MIDTRANS_SERVER_KEY}`)
-    .digest();
+  const keys = signatureKeys();
+  if (!keys.length || typeof signature_key !== 'string') return false;
   const actual = Buffer.from(signature_key, 'hex');
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
+  return keys.some((key) => {
+    const expected = createHash('sha512')
+      .update(`${order_id}${status_code}${gross_amount}${key}`)
+      .digest();
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  });
 }

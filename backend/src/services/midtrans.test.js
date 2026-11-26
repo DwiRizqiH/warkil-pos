@@ -3,18 +3,22 @@ import { describe, expect, it } from 'vitest';
 import { env } from '../config/env.js';
 import { verifySignature } from './midtrans.js';
 
-const notification = (orderId, statusCode, grossAmount) => ({
+const notification = (orderId, statusCode, grossAmount, key = env.MIDTRANS_SIGNATURE_SECRET) => ({
   order_id: orderId,
   status_code: statusCode,
   gross_amount: grossAmount,
   signature_key: createHash('sha512')
-    .update(`${orderId}${statusCode}${grossAmount}${env.MIDTRANS_SERVER_KEY}`)
+    .update(`${orderId}${statusCode}${grossAmount}${key}`)
     .digest('hex'),
 });
 
 describe('verifySignature', () => {
-  it('menerima signature SHA-512 yang dibuat dengan server key', () => {
+  it('menerima signature SHA-512 yang dibuat dengan signature secret', () => {
     expect(verifySignature(notification('TRX-1-1', '200', '20000.00'))).toBe(true);
+  });
+
+  it('masih menerima signature lama yang dibuat dengan server key', () => {
+    expect(verifySignature(notification('TRX-1-1', '200', '20000.00', env.MIDTRANS_SERVER_KEY))).toBe(true);
   });
 
   it('menolak payload yang diubah setelah ditandatangani', () => {
