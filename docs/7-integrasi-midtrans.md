@@ -61,6 +61,7 @@ server-to-server dan tidak memakai CORS.
 | `MIDTRANS_SIGNATURE_SECRET` | Kunci penanda tangan notifikasi (Signature Secret Key); sejak 28-10-2026 menggantikan server key pada formula SHA-512 |
 | `MIDTRANS_CLIENT_KEY` | Disimpan untuk kebutuhan kanal lain; belum dipakai frontend |
 | `MIDTRANS_IS_PRODUCTION` | `true` memakai `api.midtrans.com`, selain itu sandbox |
+| `MIDTRANS_NOTIFICATION_URL` | Bila diisi, charge mengirim header `X-Override-Notification` sehingga URL ini menggantikan setelan dashboard |
 | `MIDTRANS_EXPIRY_MINUTES` | Cadangan bila respons charge tidak membawa `expiry_time` |
 
 Signature memakai `MIDTRANS_SIGNATURE_SECRET` bila diisi; server key tetap diterima sebagai

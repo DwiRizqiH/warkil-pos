@@ -16,6 +16,7 @@ async function call(path, init = {}) {
       accept: 'application/json',
       'content-type': 'application/json',
       authorization: `Basic ${Buffer.from(`${env.MIDTRANS_SERVER_KEY}:`).toString('base64')}`,
+      ...init.headers,
     },
   });
   const payload = await res.json().catch(() => null);
@@ -31,6 +32,9 @@ async function call(path, init = {}) {
 export function createQrisCharge({ orderId, amount }) {
   return call('/v2/charge', {
     method: 'POST',
+    headers: env.MIDTRANS_NOTIFICATION_URL
+      ? { 'x-override-notification': env.MIDTRANS_NOTIFICATION_URL }
+      : {},
     body: JSON.stringify({
       payment_type: 'qris',
       transaction_details: { order_id: orderId, gross_amount: amount },

@@ -12,4 +12,5 @@ export const testEnv = {
   MIDTRANS_IS_PRODUCTION: 'false',
   MIDTRANS_SERVER_KEY: 'SB-Mid-server-test',
   MIDTRANS_SIGNATURE_SECRET: 'Mid-server-signature-test',
+  MIDTRANS_NOTIFICATION_URL: 'https://example.test/api/payments/midtrans/notification',
 };
